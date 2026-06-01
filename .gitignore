@@ -30,3 +30,11 @@ dist/
 # Flutter generated
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Swift / SPM
+.build/
+.build-xcode/
+.swiftpm/
+Package.resolved
+*.xcodeproj/xcuserdata/
+DerivedData/
