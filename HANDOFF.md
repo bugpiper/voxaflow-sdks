@@ -95,9 +95,12 @@ const call = await client.startCall({ video: true });
 - **Token endpoint** on the tenant backend (the one thing the SDK requires).
 - **Custom video UI** if desired: use `call.lkRoom` (the `livekit_client` `Room`) with `VideoTrackRenderer`.
 
+### Native call UX (CallKit / incoming UI / foreground service / push)
+**Wired** in the Flutter SDK as `VoxaCallKit` (CallKit on iOS; full-screen incoming notification + ConnectionService on Android; VoIP/FCM push handling) — see **`flutter/voxaflow_flutter/NATIVE_CALL_SETUP.md`** for Dart usage + the required Info.plist / AndroidManifest / PushKit-FCM config. The Dart side compiles clean; OS behavior (incoming-while-backgrounded, accept→join, lock-screen UI, audio routing) **must be verified on real devices** — it can't run headless. In-call audio routing is handled by LiveKit/WebRTC.
+
 ### Known gaps (not built / not in scope here)
-- Mobile-critical native integration: CallKit/AVAudioSession (iOS), AudioManager focus + foreground service (Android), push/incoming-call, proximity, Bluetooth-route UI. **A real call works; these polish the OS-level call experience.**
 - Rich UI is minimal/light-styled (Midnight Intelligence design tokens not yet applied). Flutter UI widgets beyond the example aren't built.
+- Proximity sensor + a custom Bluetooth-route picker UI (LiveKit handles the routing itself; a custom picker isn't built).
 - Not published to pub.dev/npm yet — consume via path/workspace for now.
 
 ---

@@ -16,7 +16,7 @@ void main() {
   const token = String.fromEnvironment('VOXA_TOKEN');
 
   test('connects to prod, parses the token, and runs a REST call', () async {
-    final client = VoxaClient(VoxaConfig(endpoint: endpoint, token: token));
+    final client = VoxaClient(const VoxaConfig(endpoint: endpoint, token: token));
     final states = <VoxaConnectionState>[];
     final sub = client.connectionState.listen(states.add);
 

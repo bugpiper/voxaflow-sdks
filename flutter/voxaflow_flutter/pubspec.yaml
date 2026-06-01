@@ -17,6 +17,9 @@ dependencies:
   socket_io_client: ^2.0.3
   # REST (token mint/refresh, /rtc/token, chat, etc.)
   http: ^1.2.0
+  # Native call UX: CallKit (iOS) + full-screen incoming UI / ConnectionService (Android).
+  # Mobile-only — for web targets use @voxaflow/web-core instead.
+  flutter_callkit_incoming: ^2.0.0
 
 dev_dependencies:
   flutter_test:
