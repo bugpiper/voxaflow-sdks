@@ -6,5 +6,6 @@ export { TokenProfile } from './capabilities.js';
 export type { Capability } from './capabilities.js';
 export { CallSession, RtcSession } from './sessions/call.js';
 export { ChatSession } from './sessions/chat.js';
+export { MeetingSession } from './sessions/meeting.js';
 export type { VoxaEventMap } from './events.js';
 export * from './models.js';

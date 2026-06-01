@@ -5,6 +5,7 @@ import 'errors.dart';
 import 'models/models.dart';
 import 'sessions/call_session.dart';
 import 'sessions/chat_session.dart';
+import 'sessions/meeting_session.dart';
 import 'transport/realtime.dart';
 import 'transport/rest_client.dart';
 
@@ -65,6 +66,9 @@ class VoxaClient {
   Stream<TypingEvent> get typing => _realtime.typing;
   Stream<PresenceUpdate> get presence => _realtime.presence;
   Stream<CallStatusEvent> get callStatus => _realtime.callStatus;
+  Stream<MeetingTranscriptSegment> get meetingTranscript => _realtime.meetingTranscript;
+  Stream<MeetingParticipantEvent> get meetingParticipant => _realtime.meetingParticipant;
+  Stream<MeetingOutputEvent> get meetingOutput => _realtime.meetingOutput;
 
   /// Open the realtime channel and validate the token.
   Future<void> connect() async {
@@ -97,6 +101,32 @@ class VoxaClient {
       callId: callId ?? _ephemeralId('call'),
       video: video,
       name: name,
+    );
+  }
+
+  /// Create a multi-party meeting (AGENT+); returns its id + room name.
+  Future<Map<String, dynamic>> createMeeting({String? type, String? title}) async {
+    _profile.requireCapability(Capability.callControl);
+    _ensureConnected();
+    return _rest.post('/meetings', {
+      if (type != null) 'type': type,
+      if (title != null) 'title': title,
+    });
+  }
+
+  /// Join a multi-party meeting by [meetingId]. Per-speaker transcript / participant /
+  /// output events arrive on the meeting* streams.
+  Future<MeetingSession> joinMeeting(String meetingId, {bool video = false, String? displayName, String? role, String? language}) async {
+    _profile.requireCapability(video ? Capability.joinVideo : Capability.joinCall);
+    _ensureConnected();
+    return MeetingSession.join(
+      rest: _rest,
+      realtime: _realtime,
+      meetingId: meetingId,
+      video: video,
+      displayName: displayName,
+      role: role,
+      language: language,
     );
   }
 

@@ -9,6 +9,9 @@ import {
   parseTyping,
   parsePresence,
   parseCallStatus,
+  parseMeetingTranscript,
+  parseMeetingParticipant,
+  parseMeetingOutput,
 } from '../models.js';
 
 type J = Record<string, unknown>;
@@ -49,6 +52,9 @@ export class VoxaRealtime {
     socket.on('chat:typing', (d: J) => this.emitter.emit('typing', parseTyping(d)));
     socket.on('presence:update', (d: J) => this.emitter.emit('presence', parsePresence(d)));
     socket.on('call:status', (d: J) => this.emitter.emit('callStatus', parseCallStatus(d)));
+    socket.on('meeting:transcript', (d: J) => this.emitter.emit('meetingTranscript', parseMeetingTranscript(d)));
+    socket.on('meeting:participant', (d: J) => this.emitter.emit('meetingParticipant', parseMeetingParticipant(d)));
+    socket.on('meeting:output', (d: J) => this.emitter.emit('meetingOutput', parseMeetingOutput(d)));
 
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Realtime connect timed out')), 15000);

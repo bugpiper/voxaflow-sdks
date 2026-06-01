@@ -149,3 +149,43 @@ export function parsePresence(j: J): PresenceUpdate {
 export function parseCallStatus(j: J): CallStatusEvent {
   return { callId: str(j.callId), status: str(j.status), durationSeconds: num(j.durationSeconds) };
 }
+
+/** Per-speaker meeting transcript segment. Sourced from `meeting:transcript`. */
+export interface MeetingTranscriptSegment {
+  meetingId: string;
+  speakerId: string;
+  identity: string;
+  text: string;
+  isFinal: boolean;
+  language?: string;
+  startTime?: number;
+}
+/** Meeting participant join/left. Sourced from `meeting:participant`. */
+export interface MeetingParticipantEvent {
+  meetingId: string;
+  identity: string;
+  state: string; // 'joined' | 'left'
+}
+/** Meeting AI output generated (summary, action items, …). Sourced from `meeting:output`. */
+export interface MeetingOutputEvent {
+  meetingId: string;
+  type: string;
+}
+
+export function parseMeetingTranscript(j: J): MeetingTranscriptSegment {
+  return {
+    meetingId: str(j.meetingId),
+    speakerId: str(j.speakerId),
+    identity: str(j.identity),
+    text: str(j.text),
+    isFinal: bool(j.isFinal),
+    language: typeof j.language === 'string' ? j.language : undefined,
+    startTime: num(j.startTime),
+  };
+}
+export function parseMeetingParticipant(j: J): MeetingParticipantEvent {
+  return { meetingId: str(j.meetingId), identity: str(j.identity), state: str(j.state) };
+}
+export function parseMeetingOutput(j: J): MeetingOutputEvent {
+  return { meetingId: str(j.meetingId), type: str(j.type) };
+}

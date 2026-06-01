@@ -178,3 +178,54 @@ class Suggestion {
         confidence: (j['confidence'] as num?)?.toDouble(),
       );
 }
+
+/// Per-speaker meeting transcript segment. Sourced from `meeting:transcript`.
+class MeetingTranscriptSegment {
+  const MeetingTranscriptSegment({
+    required this.meetingId,
+    required this.speakerId,
+    required this.identity,
+    required this.text,
+    required this.isFinal,
+    this.language,
+    this.startTime,
+  });
+  final String meetingId;
+  final String speakerId;
+  final String identity;
+  final String text;
+  final bool isFinal;
+  final String? language;
+  final double? startTime;
+  factory MeetingTranscriptSegment.fromJson(Map<String, dynamic> j) => MeetingTranscriptSegment(
+        meetingId: (j['meetingId'] ?? '') as String,
+        speakerId: (j['speakerId'] ?? '') as String,
+        identity: (j['identity'] ?? '') as String,
+        text: (j['text'] ?? '') as String,
+        isFinal: (j['isFinal'] ?? false) as bool,
+        language: j['language'] as String?,
+        startTime: (j['startTime'] as num?)?.toDouble(),
+      );
+}
+
+/// Meeting participant join/left. Sourced from `meeting:participant`.
+class MeetingParticipantEvent {
+  const MeetingParticipantEvent({required this.meetingId, required this.identity, required this.state});
+  final String meetingId;
+  final String identity;
+  final String state; // 'joined' | 'left'
+  factory MeetingParticipantEvent.fromJson(Map<String, dynamic> j) => MeetingParticipantEvent(
+        meetingId: (j['meetingId'] ?? '') as String,
+        identity: (j['identity'] ?? '') as String,
+        state: (j['state'] ?? '') as String,
+      );
+}
+
+/// Meeting AI output generated. Sourced from `meeting:output`.
+class MeetingOutputEvent {
+  const MeetingOutputEvent({required this.meetingId, required this.type});
+  final String meetingId;
+  final String type;
+  factory MeetingOutputEvent.fromJson(Map<String, dynamic> j) =>
+      MeetingOutputEvent(meetingId: (j['meetingId'] ?? '') as String, type: (j['type'] ?? '') as String);
+}

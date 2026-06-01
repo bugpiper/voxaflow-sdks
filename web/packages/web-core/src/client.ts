@@ -7,6 +7,7 @@ import { VoxaRest } from './transport/rest.js';
 import { VoxaRealtime } from './transport/realtime.js';
 import { CallSession } from './sessions/call.js';
 import { ChatSession } from './sessions/chat.js';
+import { MeetingSession } from './sessions/meeting.js';
 import { parseEntity, type ExtractedEntity, type Suggestion, type CallInfo, type FormState } from './models.js';
 
 /**
@@ -68,6 +69,21 @@ export class VoxaClient extends EventEmitter<VoxaEventMap> {
       video: opts.video,
       name: opts.name,
     });
+  }
+
+  /** Create a multi-party meeting (AGENT+); returns its id + room name. */
+  async createMeeting(opts: { type?: string; title?: string } = {}): Promise<{ meetingId: string; roomName: string }> {
+    this.profile.requireCapability('callControl');
+    this.ensureConnected();
+    return this.rest.post<{ meetingId: string; roomName: string }>('/meetings', opts);
+  }
+
+  /** Join a multi-party meeting by id. Per-speaker transcript / participant / output events
+   *  arrive on the meeting* events. */
+  async joinMeeting(meetingId: string, opts: { video?: boolean; displayName?: string; role?: string; language?: string } = {}): Promise<MeetingSession> {
+    this.profile.requireCapability(opts.video ? 'joinVideo' : 'joinCall');
+    this.ensureConnected();
+    return MeetingSession.join({ rest: this.rest, realtime: this.realtime, meetingId, ...opts });
   }
 
   /** Open a chat conversation (attach to `conversationId`, or start one on a `channel` handle). */

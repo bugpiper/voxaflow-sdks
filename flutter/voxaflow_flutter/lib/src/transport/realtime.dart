@@ -24,6 +24,9 @@ class VoxaRealtime {
   final _typing = StreamController<TypingEvent>.broadcast();
   final _presence = StreamController<PresenceUpdate>.broadcast();
   final _callStatus = StreamController<CallStatusEvent>.broadcast();
+  final _meetingTranscript = StreamController<MeetingTranscriptSegment>.broadcast();
+  final _meetingParticipant = StreamController<MeetingParticipantEvent>.broadcast();
+  final _meetingOutput = StreamController<MeetingOutputEvent>.broadcast();
 
   Stream<VoxaConnectionState> get connectionState => _connection.stream;
   Stream<TranscriptSegment> get transcript => _transcript.stream;
@@ -33,6 +36,9 @@ class VoxaRealtime {
   Stream<TypingEvent> get typing => _typing.stream;
   Stream<PresenceUpdate> get presence => _presence.stream;
   Stream<CallStatusEvent> get callStatus => _callStatus.stream;
+  Stream<MeetingTranscriptSegment> get meetingTranscript => _meetingTranscript.stream;
+  Stream<MeetingParticipantEvent> get meetingParticipant => _meetingParticipant.stream;
+  Stream<MeetingOutputEvent> get meetingOutput => _meetingOutput.stream;
 
   Future<void> connect() => _open(awaitReady: true);
 
@@ -74,6 +80,9 @@ class VoxaRealtime {
     socket.on('chat:typing', (d) => _typing.add(TypingEvent.fromJson(asMap(d))));
     socket.on('presence:update', (d) => _presence.add(PresenceUpdate.fromJson(asMap(d))));
     socket.on('call:status', (d) => _callStatus.add(CallStatusEvent.fromJson(asMap(d))));
+    socket.on('meeting:transcript', (d) => _meetingTranscript.add(MeetingTranscriptSegment.fromJson(asMap(d))));
+    socket.on('meeting:participant', (d) => _meetingParticipant.add(MeetingParticipantEvent.fromJson(asMap(d))));
+    socket.on('meeting:output', (d) => _meetingOutput.add(MeetingOutputEvent.fromJson(asMap(d))));
 
     if (!awaitReady) {
       socket.connect();
@@ -108,5 +117,8 @@ class VoxaRealtime {
     await _typing.close();
     await _presence.close();
     await _callStatus.close();
+    await _meetingTranscript.close();
+    await _meetingParticipant.close();
+    await _meetingOutput.close();
   }
 }

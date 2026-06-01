@@ -45,6 +45,8 @@ Same surface on every platform (idioms differ):
 VoxaClient(config: { endpoint, token, onTokenRefresh? })
   connect() · disconnect() · can(capability) · profile{ role, capabilities, tenantId, userId }
   startCall({ callId?, video?, name? }) -> CallSession        // requires joinCall/joinVideo
+  joinMeeting(meetingId, { video?, displayName?, role?, language? }) -> MeetingSession  // joinCall/joinVideo
+  createMeeting({ type?, title? }) -> { meetingId, roomName }  // callControl (AGENT+)
   openChat({ conversationId? | channel?, contactIdentifier?, language? }) -> ChatSession  // requires chat
   setPresence(status)                                          // requires presence (AGENT+)
 
@@ -60,7 +62,7 @@ VoxaClient(config: { endpoint, token, onTokenRefresh? })
   getSummary(id)                                               // copilot
 
   events: connectionState, transcript, entityExtracted, formUpdate, message, typing,
-          presence, callStatus, error
+          presence, callStatus, meetingTranscript, meetingParticipant, meetingOutput, error
 
 CallSession   (wraps the platform LiveKit Room — `lkRoom`/`room` escape hatch)
   setMicEnabled(bool) · setMuted(bool) · setCameraEnabled(bool)

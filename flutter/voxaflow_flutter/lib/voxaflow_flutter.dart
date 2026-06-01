@@ -9,4 +9,5 @@ export 'src/capabilities.dart' show Capability, TokenProfile;
 export 'src/errors.dart' show VoxaError, VoxaErrorCode;
 export 'src/sessions/call_session.dart' show CallSession, RtcSession;
 export 'src/sessions/chat_session.dart' show ChatSession;
+export 'src/sessions/meeting_session.dart' show MeetingSession;
 export 'src/models/models.dart';
