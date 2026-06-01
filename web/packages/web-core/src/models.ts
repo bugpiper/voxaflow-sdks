@@ -1,0 +1,127 @@
+// Data models surfaced by the SDK events. Shapes mirror the Voxa backend Socket.IO
+// event catalog (ServerToClientEvents) and REST responses.
+
+export type VoxaConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+
+export interface TranscriptSegment {
+  id?: string;
+  speaker: string; // 'AGENT' | 'CALLER'
+  text: string;
+  isFinal: boolean;
+  confidence?: number;
+  language?: string;
+  startTime?: number;
+  endTime?: number;
+}
+
+export interface ExtractedEntity {
+  id?: string;
+  entityType: string;
+  entityCategory: string;
+  value: string;
+  code?: string;
+  codeSystem?: string;
+  confidence?: number;
+  negated?: boolean;
+}
+
+export interface FormUpdate {
+  fieldId: string;
+  value: unknown;
+  confidence?: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  sender: string; // 'CONTACT' | 'AGENT' | 'BOT' | 'SYSTEM'
+  content: string;
+  createdAt: string;
+  isDraft: boolean;
+  isBot: boolean;
+  botMeta?: Record<string, unknown>;
+}
+
+export interface TypingEvent {
+  conversationId: string;
+  sender: string;
+}
+
+export interface PresenceUpdate {
+  userId: string;
+  status: string;
+}
+
+export interface CallStatusEvent {
+  callId: string;
+  status: string;
+  durationSeconds?: number;
+}
+
+export interface AudioQuality {
+  mos?: number;
+  loss?: number;
+  jitter?: number;
+  rtt?: number;
+}
+
+type J = Record<string, unknown>;
+const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d);
+const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
+const bool = (v: unknown, d = false): boolean => (typeof v === 'boolean' ? v : d);
+
+export function parseTranscript(j: J): TranscriptSegment {
+  return {
+    id: typeof j.id === 'string' ? j.id : undefined,
+    speaker: str(j.speaker, 'CALLER'),
+    text: str(j.text),
+    isFinal: bool(j.isFinal),
+    confidence: num(j.confidence),
+    language: typeof j.language === 'string' ? j.language : undefined,
+    startTime: num(j.startTime),
+    endTime: num(j.endTime),
+  };
+}
+
+export function parseEntity(j: J): ExtractedEntity {
+  return {
+    id: typeof j.id === 'string' ? j.id : undefined,
+    entityType: str(j.entityType),
+    entityCategory: str(j.entityCategory),
+    value: str(j.value),
+    code: typeof j.code === 'string' ? j.code : undefined,
+    codeSystem: typeof j.codeSystem === 'string' ? j.codeSystem : undefined,
+    confidence: num(j.confidence),
+    negated: bool(j.negated),
+  };
+}
+
+export function parseFormUpdate(j: J): FormUpdate {
+  return { fieldId: str(j.fieldId), value: j.value, confidence: num(j.confidence) };
+}
+
+export function parseMessage(j: J, isDraft = false): ChatMessage {
+  const sender = str(j.sender, 'SYSTEM');
+  return {
+    id: str(j.id),
+    conversationId: str(j.conversationId),
+    sender,
+    content: str(j.content),
+    createdAt: str(j.createdAt),
+    isDraft,
+    isBot: sender === 'BOT',
+    botMeta: typeof j.botMeta === 'object' && j.botMeta !== null ? (j.botMeta as Record<string, unknown>) : undefined,
+  };
+}
+
+export function parseTyping(j: J): TypingEvent {
+  return { conversationId: str(j.conversationId), sender: str(j.sender) };
+}
+
+export function parsePresence(j: J): PresenceUpdate {
+  return { userId: str(j.userId), status: str(j.status) };
+}
+
+export function parseCallStatus(j: J): CallStatusEvent {
+  return { callId: str(j.callId), status: str(j.status), durationSeconds: num(j.durationSeconds) };
+}
