@@ -1,0 +1,45 @@
+{
+  "name": "@voxaflow/react-native",
+  "version": "0.1.0",
+  "description": "React Native SDK for Voxa Flow — wraps @livekit/react-native + @voxaflow/web-core (hooks reused from @voxaflow/react).",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@voxaflow/react": "workspace:*",
+    "@voxaflow/web-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.73.0",
+    "@livekit/react-native": ">=2.0.0",
+    "@livekit/react-native-webrtc": ">=125.0.0",
+    "livekit-client": "^2.5.0",
+    "socket.io-client": "^4.7.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "react": "^18.3.0",
+    "react-native": "^0.76.0",
+    "@livekit/react-native": "^2.6.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
