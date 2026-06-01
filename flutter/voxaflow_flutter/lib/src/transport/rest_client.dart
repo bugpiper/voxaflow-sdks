@@ -27,9 +27,6 @@ class VoxaRest {
   final http.Client _http;
   String _token;
 
-  String get token => _token;
-  set token(String t) => _token = t;
-
   Future<Map<String, dynamic>> post(String path, [Map<String, dynamic>? body]) =>
       _send('POST', path, body);
 

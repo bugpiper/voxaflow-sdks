@@ -1,5 +1,5 @@
-/// Data models surfaced by the SDK as typed Streams. Field shapes mirror the
-/// Voxa backend Socket.IO event catalog (ServerToClientEvents) and REST responses.
+// Data models surfaced by the SDK as typed Streams. Field shapes mirror the
+// Voxa backend Socket.IO event catalog (ServerToClientEvents) and REST responses.
 
 /// Unified connection lifecycle (mirrors LiveKit + the Voxa realtime channel).
 enum VoxaConnectionState { connecting, connected, reconnecting, disconnected }

@@ -49,7 +49,7 @@ class VoxaClient {
   final VoxaConfig config;
   final VoxaRest _rest;
   final VoxaRealtime _realtime;
-  TokenProfile _profile;
+  final TokenProfile _profile;
   bool _connected = false;
 
   /// The capability profile derived from the token (role-based today).

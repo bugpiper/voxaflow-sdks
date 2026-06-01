@@ -84,7 +84,7 @@ class VoxaRealtime {
       if (!ready.isCompleted) ready.complete();
     });
     socket.onConnectError((e) {
-      if (!ready.isCompleted) ready.completeError(e);
+      if (!ready.isCompleted) ready.completeError((e as Object?) ?? Exception('socket connect_error'));
     });
     socket.connect();
     await ready.future.timeout(const Duration(seconds: 15));
