@@ -117,3 +117,40 @@ data class Suggestion(val id: String, val fieldId: String, val value: String?, v
         )
     }
 }
+
+/** Per-speaker meeting transcript segment. From `meeting:transcript`. */
+data class MeetingTranscriptSegment(
+    val meetingId: String,
+    val speakerId: String,
+    val identity: String,
+    val text: String,
+    val isFinal: Boolean,
+    val language: String?,
+    val startTime: Double?,
+) {
+    companion object {
+        fun fromJson(j: JSONObject) = MeetingTranscriptSegment(
+            meetingId = j.strOr("meetingId"),
+            speakerId = j.strOr("speakerId"),
+            identity = j.strOr("identity"),
+            text = j.strOr("text"),
+            isFinal = j.optBoolean("isFinal", false),
+            language = j.optString("language").takeIf { it.isNotEmpty() },
+            startTime = j.dblOrNull("startTime"),
+        )
+    }
+}
+
+/** Meeting participant join/left. From `meeting:participant`. */
+data class MeetingParticipantEvent(val meetingId: String, val identity: String, val state: String) {
+    companion object {
+        fun fromJson(j: JSONObject) = MeetingParticipantEvent(j.strOr("meetingId"), j.strOr("identity"), j.strOr("state"))
+    }
+}
+
+/** Meeting AI output generated. From `meeting:output`. */
+data class MeetingOutputEvent(val meetingId: String, val type: String) {
+    companion object {
+        fun fromJson(j: JSONObject) = MeetingOutputEvent(j.strOr("meetingId"), j.strOr("type"))
+    }
+}

@@ -13,6 +13,9 @@ final class VoxaRealtime {
     let typing = PassthroughSubject<TypingEvent, Never>()
     let presence = PassthroughSubject<PresenceUpdate, Never>()
     let callStatus = PassthroughSubject<CallStatusEvent, Never>()
+    let meetingTranscript = PassthroughSubject<MeetingTranscriptSegment, Never>()
+    let meetingParticipant = PassthroughSubject<MeetingParticipantEvent, Never>()
+    let meetingOutput = PassthroughSubject<MeetingOutputEvent, Never>()
 
     private let origin: URL
     private var token: String
@@ -54,6 +57,9 @@ final class VoxaRealtime {
         sock.on("chat:typing") { [weak self] d, _ in if let j = dict(d) { self?.typing.send(.init(json: j)) } }
         sock.on("presence:update") { [weak self] d, _ in if let j = dict(d) { self?.presence.send(.init(json: j)) } }
         sock.on("call:status") { [weak self] d, _ in if let j = dict(d) { self?.callStatus.send(.init(json: j)) } }
+        sock.on("meeting:transcript") { [weak self] d, _ in if let j = dict(d) { self?.meetingTranscript.send(.init(json: j)) } }
+        sock.on("meeting:participant") { [weak self] d, _ in if let j = dict(d) { self?.meetingParticipant.send(.init(json: j)) } }
+        sock.on("meeting:output") { [weak self] d, _ in if let j = dict(d) { self?.meetingOutput.send(.init(json: j)) } }
 
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             let resumed = ResumeOnce()

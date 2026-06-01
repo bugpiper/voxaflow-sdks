@@ -24,6 +24,9 @@ internal class VoxaRealtime(endpoint: String, @Volatile private var token: Strin
     val typing = MutableSharedFlow<TypingEvent>(extraBufferCapacity = 64)
     val presence = MutableSharedFlow<PresenceUpdate>(extraBufferCapacity = 64)
     val callStatus = MutableSharedFlow<CallStatusEvent>(extraBufferCapacity = 64)
+    val meetingTranscript = MutableSharedFlow<MeetingTranscriptSegment>(extraBufferCapacity = 64)
+    val meetingParticipant = MutableSharedFlow<MeetingParticipantEvent>(extraBufferCapacity = 64)
+    val meetingOutput = MutableSharedFlow<MeetingOutputEvent>(extraBufferCapacity = 64)
 
     private val origin: String
     private var socket: Socket? = null
@@ -56,6 +59,9 @@ internal class VoxaRealtime(endpoint: String, @Volatile private var token: Strin
         sock.on("chat:typing") { a -> dict(a)?.let { typing.tryEmit(TypingEvent.fromJson(it)) } }
         sock.on("presence:update") { a -> dict(a)?.let { presence.tryEmit(PresenceUpdate.fromJson(it)) } }
         sock.on("call:status") { a -> dict(a)?.let { callStatus.tryEmit(CallStatusEvent.fromJson(it)) } }
+        sock.on("meeting:transcript") { a -> dict(a)?.let { meetingTranscript.tryEmit(MeetingTranscriptSegment.fromJson(it)) } }
+        sock.on("meeting:participant") { a -> dict(a)?.let { meetingParticipant.tryEmit(MeetingParticipantEvent.fromJson(it)) } }
+        sock.on("meeting:output") { a -> dict(a)?.let { meetingOutput.tryEmit(MeetingOutputEvent.fromJson(it)) } }
         return sock
     }
 

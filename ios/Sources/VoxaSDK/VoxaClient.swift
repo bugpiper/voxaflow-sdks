@@ -45,6 +45,9 @@ public final class VoxaClient {
     public var typing: AnyPublisher<TypingEvent, Never> { realtime.typing.eraseToAnyPublisher() }
     public var presence: AnyPublisher<PresenceUpdate, Never> { realtime.presence.eraseToAnyPublisher() }
     public var callStatus: AnyPublisher<CallStatusEvent, Never> { realtime.callStatus.eraseToAnyPublisher() }
+    public var meetingTranscript: AnyPublisher<MeetingTranscriptSegment, Never> { realtime.meetingTranscript.eraseToAnyPublisher() }
+    public var meetingParticipant: AnyPublisher<MeetingParticipantEvent, Never> { realtime.meetingParticipant.eraseToAnyPublisher() }
+    public var meetingOutput: AnyPublisher<MeetingOutputEvent, Never> { realtime.meetingOutput.eraseToAnyPublisher() }
 
     public func can(_ c: Capability) -> Bool { profile.can(c) }
 
@@ -66,6 +69,24 @@ public final class VoxaClient {
         try profile.requireCapability(video ? .joinVideo : .joinCall)
         try ensureConnected()
         return try await CallSession.start(rest: rest, realtime: realtime, callId: callId ?? Self.ephemeralId("call"), video: video, name: name)
+    }
+
+    /// Create a multi-party meeting (AGENT+); returns its id + room name.
+    @discardableResult
+    public func createMeeting(type: String? = nil, title: String? = nil) async throws -> [String: Any] {
+        try profile.requireCapability(.callControl)
+        try ensureConnected()
+        var body: [String: Any] = [:]
+        if let type { body["type"] = type }
+        if let title { body["title"] = title }
+        return try await rest.post("/meetings", body)
+    }
+
+    /// Join a multi-party meeting by id.
+    public func joinMeeting(_ meetingId: String, video: Bool = false, displayName: String? = nil, role: String? = nil, language: String? = nil) async throws -> MeetingSession {
+        try profile.requireCapability(video ? .joinVideo : .joinCall)
+        try ensureConnected()
+        return try await MeetingSession.join(rest: rest, realtime: realtime, meetingId: meetingId, video: video, displayName: displayName, role: role, language: language)
     }
 
     /// Open a chat conversation (attach to `conversationId`, or start one on a `channel` handle).

@@ -120,3 +120,42 @@ public struct Suggestion: Sendable {
         confidence = j["confidence"] as? Double
     }
 }
+
+public struct MeetingTranscriptSegment: Sendable {
+    public let meetingId: String
+    public let speakerId: String
+    public let identity: String
+    public let text: String
+    public let isFinal: Bool
+    public let language: String?
+    public let startTime: Double?
+    init(json j: [String: Any]) {
+        meetingId = j["meetingId"] as? String ?? ""
+        speakerId = j["speakerId"] as? String ?? ""
+        identity = j["identity"] as? String ?? ""
+        text = j["text"] as? String ?? ""
+        isFinal = j["isFinal"] as? Bool ?? false
+        language = j["language"] as? String
+        startTime = j["startTime"] as? Double
+    }
+}
+
+public struct MeetingParticipantEvent: Sendable {
+    public let meetingId: String
+    public let identity: String
+    public let state: String
+    init(json j: [String: Any]) {
+        meetingId = j["meetingId"] as? String ?? ""
+        identity = j["identity"] as? String ?? ""
+        state = j["state"] as? String ?? ""
+    }
+}
+
+public struct MeetingOutputEvent: Sendable {
+    public let meetingId: String
+    public let type: String
+    init(json j: [String: Any]) {
+        meetingId = j["meetingId"] as? String ?? ""
+        type = j["type"] as? String ?? ""
+    }
+}

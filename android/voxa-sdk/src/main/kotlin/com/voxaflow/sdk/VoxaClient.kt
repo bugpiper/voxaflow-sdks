@@ -3,6 +3,7 @@ package com.voxaflow.sdk
 import android.content.Context
 import com.voxaflow.sdk.sessions.CallSession
 import com.voxaflow.sdk.sessions.ChatSession
+import com.voxaflow.sdk.sessions.MeetingSession
 import com.voxaflow.sdk.transport.RestClient
 import com.voxaflow.sdk.transport.VoxaRealtime
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +49,9 @@ class VoxaClient(private val appContext: Context, config: VoxaConfig) {
     val typing: Flow<TypingEvent> get() = realtime.typing
     val presence: Flow<PresenceUpdate> get() = realtime.presence
     val callStatus: Flow<CallStatusEvent> get() = realtime.callStatus
+    val meetingTranscript: Flow<MeetingTranscriptSegment> get() = realtime.meetingTranscript
+    val meetingParticipant: Flow<MeetingParticipantEvent> get() = realtime.meetingParticipant
+    val meetingOutput: Flow<MeetingOutputEvent> get() = realtime.meetingOutput
 
     fun can(c: Capability): Boolean = profile.can(c)
 
@@ -69,6 +73,29 @@ class VoxaClient(private val appContext: Context, config: VoxaConfig) {
         profile.requireCapability(if (video) Capability.joinVideo else Capability.joinCall)
         ensureConnected()
         return CallSession.start(appContext, rest, realtime, callId ?: ephemeralId("call"), video, name)
+    }
+
+    /** Create a multi-party meeting (AGENT+); returns its id + room name. */
+    suspend fun createMeeting(type: String? = null, title: String? = null): JSONObject {
+        profile.requireCapability(Capability.callControl)
+        ensureConnected()
+        val body = JSONObject()
+        if (type != null) body.put("type", type)
+        if (title != null) body.put("title", title)
+        return rest.post("/meetings", body)
+    }
+
+    /** Join a multi-party meeting by [meetingId]. */
+    suspend fun joinMeeting(
+        meetingId: String,
+        video: Boolean = false,
+        displayName: String? = null,
+        role: String? = null,
+        language: String? = null,
+    ): MeetingSession {
+        profile.requireCapability(if (video) Capability.joinVideo else Capability.joinCall)
+        ensureConnected()
+        return MeetingSession.join(appContext, rest, realtime, meetingId, video, displayName, role, language)
     }
 
     /** Open a chat conversation (attach to [conversationId], or start one on a [channel] handle). */
