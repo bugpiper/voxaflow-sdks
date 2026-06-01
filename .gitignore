@@ -26,3 +26,7 @@ dist/
 .idea/
 .vscode/
 .DS_Store
+
+# Flutter generated
+.flutter-plugins
+.flutter-plugins-dependencies
