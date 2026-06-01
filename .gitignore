@@ -38,3 +38,11 @@ dist/
 Package.resolved
 *.xcodeproj/xcuserdata/
 DerivedData/
+
+# Android / Gradle
+.gradle/
+local.properties
+.kotlin/
+captures/
+*.apk
+*.aar
