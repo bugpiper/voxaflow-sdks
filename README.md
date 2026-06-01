@@ -23,7 +23,7 @@ The **public API is conceptually identical across platforms** — only language 
 
 ## Backend contract
 
-These SDKs wrap the live Voxa backend (the monorepo's `apps/api`). The current backend authorizes by **role** (`AGENT`/`SUPERVISOR`/`ADMIN`/`SUPER_ADMIN`); SDKs derive a capability set from it. See each platform's README for the concept→endpoint mapping. The single source-of-truth contract doc lives at [`CONTRACT.md`](CONTRACT.md) *(to be added)*.
+These SDKs wrap the live Voxa backend (the monorepo's `apps/api`). The current backend authorizes by **role** (`AGENT`/`SUPERVISOR`/`ADMIN`/`SUPER_ADMIN`); SDKs derive a capability set from it. The single source-of-truth contract — unified API, capability model, REST endpoints, and Socket.IO event schema — is in **[`CONTRACT.md`](CONTRACT.md)**.
 
 ## License
 
