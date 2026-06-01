@@ -1,0 +1,28 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+.pub-cache/
+.pub/
+**/doc/api/
+*.lock
+!example/**/pubspec.lock
+.fvm/
+
+# iOS / Android build artifacts (in sample apps)
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/android/.gradle/
+**/android/local.properties
+*.iml
+
+# Node (web / react-native packages, once added)
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
