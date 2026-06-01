@@ -1,4 +1,4 @@
-import { Room } from 'livekit-client';
+import type { Room } from 'livekit-client';
 import { VoxaError } from '../errors.js';
 import type { VoxaRest } from '../transport/rest.js';
 import type { VoxaRealtime } from '../transport/realtime.js';
@@ -61,6 +61,9 @@ export class CallSession extends RtcSession {
       throw new VoxaError('CONNECTION', 'Backend did not return a LiveKit token/wsUrl');
     }
 
+    // Load the WebRTC client only when a call actually starts, so chat-only consumers
+    // (e.g. the embeddable widget) don't bundle/download livekit-client.
+    const { Room } = await import('livekit-client');
     const room = new Room();
     try {
       await room.connect(res.wsUrl, res.token);

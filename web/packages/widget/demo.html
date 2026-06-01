@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voxa Flow Widget — demo</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 48px; color: #111827; }
+      code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>Voxa Flow Widget demo</h1>
+    <p>A host page with no framework. The chat launcher appears bottom-right.</p>
+    <p>
+      To run locally: <code>pnpm --filter @voxaflow/widget build</code>, then serve this folder
+      and open <code>demo.html</code>. Replace <code>data-token</code> with a valid Voxa JWT
+      (or point <code>data-token-endpoint</code> at your token backend).
+    </p>
+
+    <!-- Built bundle. In production this is the CDN URL (https://cdn.voxaflow.com/widget.js). -->
+    <script
+      src="./dist/widget.global.js"
+      data-endpoint="https://voxaflow.fastwheel.ai/api"
+      data-token="PASTE_A_VOXA_JWT_HERE"
+      data-channel="demo-web-widget"
+      data-color="#4f46e5"
+      data-title="VoxaFlow demo"
+    ></script>
+  </body>
+</html>

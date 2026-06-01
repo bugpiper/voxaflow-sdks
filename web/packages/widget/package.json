@@ -1,0 +1,23 @@
+{
+  "name": "@voxaflow/widget",
+  "version": "0.1.0",
+  "description": "Embeddable, no-framework Voxa Flow chat widget — a single CDN script built on @voxaflow/web-core.",
+  "type": "module",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@voxaflow/web-core": "workspace:*",
+    "socket.io-client": "^4.7.0"
+  },
+  "devDependencies": {
+    "livekit-client": "^2.5.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
