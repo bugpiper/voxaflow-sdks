@@ -81,6 +81,52 @@ public final class VoxaClient {
         try await rest.put("/agents/presence", ["status": status])
     }
 
+    // MARK: Client engagement (SDK9)
+
+    @discardableResult
+    public func requestCall(handle: String, name: String? = nil, audioOnly: Bool? = nil) async throws -> String {
+        try profile.requireCapability(.joinCall)
+        var body: [String: Any] = [:]
+        if let name { body["name"] = name }
+        if let audioOnly { body["audioOnly"] = audioOnly }
+        let res = try await rest.post("/calls/dial/\(handle)", body)
+        return res["callId"] as? String ?? ""
+    }
+
+    // MARK: Agent operations + copilot (SDK8)
+
+    public func getActiveCalls() async throws -> [[String: Any]] {
+        try profile.requireCapability(.callControl)
+        let res = try await rest.get("/calls")
+        return res["calls"] as? [[String: Any]] ?? []
+    }
+    public func answerCall(_ callId: String) async throws { try profile.requireCapability(.callControl); _ = try await rest.post("/calls/\(callId)/answer") }
+    public func holdCall(_ callId: String) async throws { try profile.requireCapability(.callControl); _ = try await rest.post("/calls/\(callId)/hold") }
+    public func transferCall(_ callId: String, toAgentId: String) async throws { try profile.requireCapability(.transfer); _ = try await rest.post("/calls/\(callId)/transfer", ["toAgentId": toAgentId]) }
+
+    public func getEntities(_ callId: String) async throws -> [ExtractedEntity] {
+        try profile.requireCapability(.entities)
+        let res = try await rest.get("/calls/\(callId)/entities")
+        return (res["entities"] as? [[String: Any]] ?? []).map { ExtractedEntity(json: $0) }
+    }
+    public func confirmEntity(_ entityId: String) async throws { try profile.requireCapability(.entities); _ = try await rest.put("/entities/\(entityId)/confirm") }
+    public func rejectEntity(_ entityId: String) async throws { try profile.requireCapability(.entities); _ = try await rest.put("/entities/\(entityId)/reject") }
+
+    public func getSuggestions(_ callId: String) async throws -> [Suggestion] {
+        try profile.requireCapability(.suggestions)
+        let res = try await rest.get("/calls/\(callId)/suggestions")
+        return (res["suggestions"] as? [[String: Any]] ?? []).map { Suggestion(json: $0) }
+    }
+    public func dismissSuggestion(_ callId: String, suggestionId: String) async throws { try profile.requireCapability(.suggestions); _ = try await rest.post("/calls/\(callId)/suggestions/\(suggestionId)/dismiss") }
+
+    public func getForm(_ callId: String) async throws -> [String: Any] { try profile.requireCapability(.forms); return try await rest.get("/calls/\(callId)/form") }
+    public func editField(_ callId: String, fieldId: String, value: Any) async throws { try profile.requireCapability(.forms); _ = try await rest.put("/calls/\(callId)/form", ["fieldId": fieldId, "value": value]) }
+    public func confirmField(_ callId: String, fieldId: String) async throws { try profile.requireCapability(.forms); _ = try await rest.post("/calls/\(callId)/form/confirm-field", ["fieldId": fieldId]) }
+    public func rejectField(_ callId: String, fieldId: String) async throws { try profile.requireCapability(.forms); _ = try await rest.post("/calls/\(callId)/form/reject-field", ["fieldId": fieldId]) }
+    public func submitForm(_ callId: String) async throws { try profile.requireCapability(.forms); _ = try await rest.post("/calls/\(callId)/form/submit") }
+
+    public func getSummary(_ callId: String) async throws -> [String: Any] { try profile.requireCapability(.copilot); return try await rest.get("/calls/\(callId)/summary") }
+
     private func ensureConnected() throws {
         if !connected { throw VoxaError(.connection, "Call connect() before opening a session.") }
     }

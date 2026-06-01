@@ -107,3 +107,16 @@ public struct CallStatusEvent: Sendable {
         durationSeconds = j["durationSeconds"] as? Int
     }
 }
+
+public struct Suggestion: Sendable {
+    public let id: String
+    public let fieldId: String
+    public let value: String?
+    public let confidence: Double?
+    init(json j: [String: Any]) {
+        id = j["id"] as? String ?? ""
+        fieldId = j["fieldId"] as? String ?? ""
+        value = j["value"].map { "\($0)" }
+        confidence = j["confidence"] as? Double
+    }
+}

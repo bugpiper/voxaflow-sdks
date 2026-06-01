@@ -105,3 +105,15 @@ data class CallStatusEvent(val callId: String, val status: String, val durationS
         fun fromJson(j: JSONObject) = CallStatusEvent(j.strOr("callId"), j.strOr("status"), j.intOrNull("durationSeconds"))
     }
 }
+
+/** A live form-fill suggestion (agent copilot). From `GET /calls/:id/suggestions`. */
+data class Suggestion(val id: String, val fieldId: String, val value: String?, val confidence: Double?) {
+    companion object {
+        fun fromJson(j: JSONObject) = Suggestion(
+            id = j.strOr("id"),
+            fieldId = j.strOr("fieldId"),
+            value = if (j.has("value") && !j.isNull("value")) j.get("value").toString() else null,
+            confidence = j.dblOrNull("confidence"),
+        )
+    }
+}

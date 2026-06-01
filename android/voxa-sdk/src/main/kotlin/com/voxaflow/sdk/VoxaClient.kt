@@ -89,6 +89,51 @@ class VoxaClient(private val appContext: Context, config: VoxaConfig) {
         rest.put("/agents/presence", JSONObject().put("status", status))
     }
 
+    // ── Client engagement (SDK9) ───────────────────────────────────────────────
+
+    suspend fun requestCall(handle: String, name: String? = null, audioOnly: Boolean? = null): String {
+        profile.requireCapability(Capability.joinCall)
+        val body = JSONObject()
+        if (name != null) body.put("name", name)
+        if (audioOnly != null) body.put("audioOnly", audioOnly)
+        return rest.post("/calls/dial/$handle", body).optString("callId")
+    }
+
+    // ── Agent operations + copilot (SDK8) ──────────────────────────────────────
+
+    suspend fun getActiveCalls(): List<JSONObject> {
+        profile.requireCapability(Capability.callControl)
+        val arr = rest.get("/calls").optJSONArray("calls") ?: return emptyList()
+        return (0 until arr.length()).map { arr.getJSONObject(it) }
+    }
+    suspend fun answerCall(callId: String) { profile.requireCapability(Capability.callControl); rest.post("/calls/$callId/answer") }
+    suspend fun holdCall(callId: String) { profile.requireCapability(Capability.callControl); rest.post("/calls/$callId/hold") }
+    suspend fun transferCall(callId: String, toAgentId: String) { profile.requireCapability(Capability.transfer); rest.post("/calls/$callId/transfer", JSONObject().put("toAgentId", toAgentId)) }
+
+    suspend fun getEntities(callId: String): List<ExtractedEntity> {
+        profile.requireCapability(Capability.entities)
+        val arr = rest.get("/calls/$callId/entities").optJSONArray("entities") ?: return emptyList()
+        return (0 until arr.length()).map { ExtractedEntity.fromJson(arr.getJSONObject(it)) }
+    }
+    suspend fun confirmEntity(entityId: String) { profile.requireCapability(Capability.entities); rest.put("/entities/$entityId/confirm") }
+    suspend fun rejectEntity(entityId: String) { profile.requireCapability(Capability.entities); rest.put("/entities/$entityId/reject") }
+
+    suspend fun getSuggestions(callId: String): List<Suggestion> {
+        profile.requireCapability(Capability.suggestions)
+        val arr = rest.get("/calls/$callId/suggestions").optJSONArray("suggestions") ?: return emptyList()
+        return (0 until arr.length()).map { Suggestion.fromJson(arr.getJSONObject(it)) }
+    }
+    suspend fun dismissSuggestion(callId: String, suggestionId: String) { profile.requireCapability(Capability.suggestions); rest.post("/calls/$callId/suggestions/$suggestionId/dismiss") }
+
+    suspend fun getForm(callId: String): JSONObject { profile.requireCapability(Capability.forms); return rest.get("/calls/$callId/form") }
+    suspend fun editField(callId: String, fieldId: String, value: Any?) { profile.requireCapability(Capability.forms); rest.put("/calls/$callId/form", JSONObject().put("fieldId", fieldId).put("value", value)) }
+    suspend fun confirmField(callId: String, fieldId: String) { profile.requireCapability(Capability.forms); rest.post("/calls/$callId/form/confirm-field", JSONObject().put("fieldId", fieldId)) }
+    suspend fun rejectField(callId: String, fieldId: String) { profile.requireCapability(Capability.forms); rest.post("/calls/$callId/form/reject-field", JSONObject().put("fieldId", fieldId)) }
+    suspend fun submitForm(callId: String) { profile.requireCapability(Capability.forms); rest.post("/calls/$callId/form/submit") }
+
+    /** Post-call summary (SOAP/BANT/etc., template-driven). */
+    suspend fun getSummary(callId: String): JSONObject { profile.requireCapability(Capability.copilot); return rest.get("/calls/$callId/summary") }
+
     private fun ensureConnected() {
         if (!connected) throw VoxaException(VoxaErrorCode.CONNECTION, "Call connect() before opening a session.")
     }
