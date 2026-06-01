@@ -161,3 +161,20 @@ class AudioQuality {
   final double? jitter;
   final double? rtt;
 }
+
+/// A live form-fill suggestion (agent copilot). Sourced from `GET /calls/:id/suggestions`.
+class Suggestion {
+  const Suggestion({required this.id, required this.fieldId, this.value, this.confidence});
+
+  final String id;
+  final String fieldId;
+  final Object? value;
+  final double? confidence;
+
+  factory Suggestion.fromJson(Map<String, dynamic> j) => Suggestion(
+        id: (j['id'] ?? '') as String,
+        fieldId: (j['fieldId'] ?? '') as String,
+        value: j['value'],
+        confidence: (j['confidence'] as num?)?.toDouble(),
+      );
+}

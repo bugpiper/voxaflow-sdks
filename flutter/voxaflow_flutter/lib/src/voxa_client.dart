@@ -121,6 +121,103 @@ class VoxaClient {
     await _rest.put('/agents/presence', {'status': status});
   }
 
+  // ── Client engagement (SDK9) ───────────────────────────────────────────────
+
+  /// Click-to-call: place an inbound call on a tenant [handle]; returns the new callId.
+  Future<String> requestCall(String handle, {String? name, bool? audioOnly}) async {
+    _profile.requireCapability(Capability.joinCall);
+    final res = await _rest.post('/calls/dial/$handle', {
+      if (name != null) 'name': name,
+      if (audioOnly != null) 'audioOnly': audioOnly,
+    });
+    return (res['callId'] as String?) ?? '';
+  }
+
+  // ── Agent operations + copilot (SDK8), callId-scoped + capability-gated ─────
+
+  Future<List<Map<String, dynamic>>> getActiveCalls() async {
+    _profile.requireCapability(Capability.callControl);
+    final res = await _rest.get('/calls');
+    return ((res['calls'] as List?) ?? []).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> answerCall(String callId) async {
+    _profile.requireCapability(Capability.callControl);
+    await _rest.post('/calls/$callId/answer');
+  }
+
+  Future<void> holdCall(String callId) async {
+    _profile.requireCapability(Capability.callControl);
+    await _rest.post('/calls/$callId/hold');
+  }
+
+  Future<void> transferCall(String callId, String toAgentId) async {
+    _profile.requireCapability(Capability.transfer);
+    await _rest.post('/calls/$callId/transfer', {'toAgentId': toAgentId});
+  }
+
+  Future<List<ExtractedEntity>> getEntities(String callId) async {
+    _profile.requireCapability(Capability.entities);
+    final res = await _rest.get('/calls/$callId/entities');
+    return ((res['entities'] as List?) ?? [])
+        .map((e) => ExtractedEntity.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  Future<void> confirmEntity(String entityId) async {
+    _profile.requireCapability(Capability.entities);
+    await _rest.put('/entities/$entityId/confirm');
+  }
+
+  Future<void> rejectEntity(String entityId) async {
+    _profile.requireCapability(Capability.entities);
+    await _rest.put('/entities/$entityId/reject');
+  }
+
+  Future<List<Suggestion>> getSuggestions(String callId) async {
+    _profile.requireCapability(Capability.suggestions);
+    final res = await _rest.get('/calls/$callId/suggestions');
+    return ((res['suggestions'] as List?) ?? [])
+        .map((s) => Suggestion.fromJson((s as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  Future<void> dismissSuggestion(String callId, String suggestionId) async {
+    _profile.requireCapability(Capability.suggestions);
+    await _rest.post('/calls/$callId/suggestions/$suggestionId/dismiss');
+  }
+
+  Future<Map<String, dynamic>> getForm(String callId) async {
+    _profile.requireCapability(Capability.forms);
+    return _rest.get('/calls/$callId/form');
+  }
+
+  Future<void> editField(String callId, String fieldId, Object? value) async {
+    _profile.requireCapability(Capability.forms);
+    await _rest.put('/calls/$callId/form', {'fieldId': fieldId, 'value': value});
+  }
+
+  Future<void> confirmField(String callId, String fieldId) async {
+    _profile.requireCapability(Capability.forms);
+    await _rest.post('/calls/$callId/form/confirm-field', {'fieldId': fieldId});
+  }
+
+  Future<void> rejectField(String callId, String fieldId) async {
+    _profile.requireCapability(Capability.forms);
+    await _rest.post('/calls/$callId/form/reject-field', {'fieldId': fieldId});
+  }
+
+  Future<void> submitForm(String callId) async {
+    _profile.requireCapability(Capability.forms);
+    await _rest.post('/calls/$callId/form/submit');
+  }
+
+  /// Post-call summary (SOAP/BANT/etc., template-driven).
+  Future<Map<String, dynamic>> getSummary(String callId) async {
+    _profile.requireCapability(Capability.copilot);
+    return _rest.get('/calls/$callId/summary');
+  }
+
   void _ensureConnected() {
     if (!_connected) {
       throw const VoxaError(VoxaErrorCode.connection, 'Call connect() before opening a session.');
