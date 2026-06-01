@@ -7,6 +7,7 @@ import { VoxaRest } from './transport/rest.js';
 import { VoxaRealtime } from './transport/realtime.js';
 import { CallSession } from './sessions/call.js';
 import { ChatSession } from './sessions/chat.js';
+import { parseEntity, type ExtractedEntity, type Suggestion, type CallInfo, type FormState } from './models.js';
 
 /**
  * Entry point of the Voxa Flow Web SDK core. Same concepts as the Flutter/RN/iOS/Android
@@ -85,6 +86,90 @@ export class VoxaClient extends EventEmitter<VoxaEventMap> {
   async setPresence(status: string): Promise<void> {
     this.profile.requireCapability('presence');
     await this.rest.put('/agents/presence', { status });
+  }
+
+  // ── Client engagement (SDK9) ───────────────────────────────────────────────
+
+  /** Click-to-call: place an inbound call on a tenant handle; returns the new callId. */
+  async requestCall(handle: string, opts: { name?: string; audioOnly?: boolean } = {}): Promise<{ callId: string; vertical?: string; routedTo?: string }> {
+    this.profile.requireCapability('joinCall');
+    const res = await this.rest.post<{ callId: string; vertical?: string; routedTo?: string }>(`/calls/dial/${handle}`, opts);
+    return res;
+  }
+
+  // ── Agent operations (SDK8) ────────────────────────────────────────────────
+
+  /** Active calls visible to this agent (own + shared queue). */
+  async getActiveCalls(): Promise<CallInfo[]> {
+    this.profile.requireCapability('callControl');
+    const res = await this.rest.get<{ calls?: CallInfo[] }>('/calls');
+    return res.calls ?? [];
+  }
+  async answerCall(callId: string): Promise<void> {
+    this.profile.requireCapability('callControl');
+    await this.rest.post(`/calls/${callId}/answer`);
+  }
+  async holdCall(callId: string): Promise<void> {
+    this.profile.requireCapability('callControl');
+    await this.rest.post(`/calls/${callId}/hold`);
+  }
+  async transferCall(callId: string, toAgentId: string): Promise<void> {
+    this.profile.requireCapability('transfer');
+    await this.rest.post(`/calls/${callId}/transfer`, { toAgentId });
+  }
+
+  // ── Agent copilot: entities (SDK8) ─────────────────────────────────────────
+  async getEntities(callId: string): Promise<ExtractedEntity[]> {
+    this.profile.requireCapability('entities');
+    const res = await this.rest.get<{ entities?: Record<string, unknown>[] }>(`/calls/${callId}/entities`);
+    return (res.entities ?? []).map(parseEntity);
+  }
+  async confirmEntity(entityId: string): Promise<void> {
+    this.profile.requireCapability('entities');
+    await this.rest.put(`/entities/${entityId}/confirm`);
+  }
+  async rejectEntity(entityId: string): Promise<void> {
+    this.profile.requireCapability('entities');
+    await this.rest.put(`/entities/${entityId}/reject`);
+  }
+
+  // ── Agent copilot: suggestions (SDK8) ──────────────────────────────────────
+  async getSuggestions(callId: string): Promise<Suggestion[]> {
+    this.profile.requireCapability('suggestions');
+    const res = await this.rest.get<{ suggestions?: Suggestion[] }>(`/calls/${callId}/suggestions`);
+    return res.suggestions ?? [];
+  }
+  async dismissSuggestion(callId: string, suggestionId: string): Promise<void> {
+    this.profile.requireCapability('suggestions');
+    await this.rest.post(`/calls/${callId}/suggestions/${suggestionId}/dismiss`);
+  }
+
+  // ── Agent copilot: smart form (SDK8) ───────────────────────────────────────
+  async getForm(callId: string): Promise<FormState> {
+    this.profile.requireCapability('forms');
+    return this.rest.get<FormState>(`/calls/${callId}/form`);
+  }
+  async editField(callId: string, fieldId: string, value: unknown): Promise<void> {
+    this.profile.requireCapability('forms');
+    await this.rest.put(`/calls/${callId}/form`, { fieldId, value });
+  }
+  async confirmField(callId: string, fieldId: string): Promise<void> {
+    this.profile.requireCapability('forms');
+    await this.rest.post(`/calls/${callId}/form/confirm-field`, { fieldId });
+  }
+  async rejectField(callId: string, fieldId: string): Promise<void> {
+    this.profile.requireCapability('forms');
+    await this.rest.post(`/calls/${callId}/form/reject-field`, { fieldId });
+  }
+  async submitForm(callId: string): Promise<void> {
+    this.profile.requireCapability('forms');
+    await this.rest.post(`/calls/${callId}/form/submit`);
+  }
+
+  /** Post-call summary (SOAP/BANT/etc., template-driven). */
+  async getSummary(callId: string): Promise<Record<string, unknown>> {
+    this.profile.requireCapability('copilot');
+    return this.rest.get<Record<string, unknown>>(`/calls/${callId}/summary`);
   }
 
   private ensureConnected(): void {

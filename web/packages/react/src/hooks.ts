@@ -5,6 +5,8 @@ import type {
   ChatMessage,
   TranscriptSegment,
   VoxaConnectionState,
+  ExtractedEntity,
+  Suggestion,
 } from '@voxaflow/web-core';
 import { useVoxaClient } from './context.js';
 
@@ -164,4 +166,58 @@ export function useVoxaChat(opts: { conversationId?: string; channel?: string })
   );
 
   return { session, messages, send };
+}
+
+export interface UseEntities {
+  entities: ExtractedEntity[];
+  confirm: (entityId: string) => Promise<void>;
+  reject: (entityId: string) => Promise<void>;
+  refresh: () => Promise<void>;
+}
+
+/** Extracted entities for a call; refetches when an `entityExtracted` event arrives. */
+export function useEntities(callId: string): UseEntities {
+  const client = useVoxaClient();
+  const [entities, setEntities] = useState<ExtractedEntity[]>([]);
+  const refresh = useCallback(async () => {
+    if (client && callId) setEntities(await client.getEntities(callId));
+  }, [client, callId]);
+  useEffect(() => {
+    void refresh();
+    if (!client) return;
+    const h = () => void refresh();
+    client.on('entityExtracted', h);
+    return () => {
+      client.off('entityExtracted', h);
+    };
+  }, [client, refresh]);
+  const confirm = useCallback(async (id: string) => { await client?.confirmEntity(id); await refresh(); }, [client, refresh]);
+  const reject = useCallback(async (id: string) => { await client?.rejectEntity(id); await refresh(); }, [client, refresh]);
+  return { entities, confirm, reject, refresh };
+}
+
+export interface UseSuggestions {
+  suggestions: Suggestion[];
+  dismiss: (suggestionId: string) => Promise<void>;
+  refresh: () => Promise<void>;
+}
+
+/** Live form-fill suggestions for a call; refetches on `formUpdate`. */
+export function useSuggestions(callId: string): UseSuggestions {
+  const client = useVoxaClient();
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const refresh = useCallback(async () => {
+    if (client && callId) setSuggestions(await client.getSuggestions(callId));
+  }, [client, callId]);
+  useEffect(() => {
+    void refresh();
+    if (!client) return;
+    const h = () => void refresh();
+    client.on('formUpdate', h);
+    return () => {
+      client.off('formUpdate', h);
+    };
+  }, [client, refresh]);
+  const dismiss = useCallback(async (id: string) => { await client?.dismissSuggestion(callId, id); await refresh(); }, [client, callId, refresh]);
+  return { suggestions, dismiss, refresh };
 }

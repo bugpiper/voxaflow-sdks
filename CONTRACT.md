@@ -47,6 +47,18 @@ VoxaClient(config: { endpoint, token, onTokenRefresh? })
   startCall({ callId?, video?, name? }) -> CallSession        // requires joinCall/joinVideo
   openChat({ conversationId? | channel?, contactIdentifier?, language? }) -> ChatSession  // requires chat
   setPresence(status)                                          // requires presence (AGENT+)
+
+  // Client engagement (SDK9):
+  requestCall(handle, { name?, audioOnly? }) -> { callId, … }  // requires joinCall
+
+  // Agent ops + copilot (SDK8) — callId-scoped, capability-gated:
+  getActiveCalls() · answerCall(id) · holdCall(id)             // callControl
+  transferCall(id, toAgentId)                                  // transfer
+  getEntities(id) · confirmEntity(eid) · rejectEntity(eid)     // entities
+  getSuggestions(id) · dismissSuggestion(id, sid)              // suggestions
+  getForm(id) · editField(id,f,v) · confirmField(id,f) · rejectField(id,f) · submitForm(id)  // forms
+  getSummary(id)                                               // copilot
+
   events: connectionState, transcript, entityExtracted, formUpdate, message, typing,
           presence, callStatus, error
 

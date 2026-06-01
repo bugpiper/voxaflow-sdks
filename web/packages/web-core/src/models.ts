@@ -65,6 +65,30 @@ export interface AudioQuality {
   rtt?: number;
 }
 
+/** A live form-fill suggestion (agent copilot). */
+export interface Suggestion {
+  id: string;
+  fieldId: string;
+  value: unknown;
+  confidence?: number;
+}
+
+/** Summary of a call in the agent's queue/active list. */
+export interface CallInfo {
+  id: string;
+  callerIdentifier?: string;
+  status: string;
+  agentId?: string | null;
+  startedAt?: string;
+}
+
+/** Smart-form state + schema. */
+export interface FormState {
+  form: Record<string, unknown>;
+  status: string;
+  schema: unknown[];
+}
+
 type J = Record<string, unknown>;
 const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d);
 const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
