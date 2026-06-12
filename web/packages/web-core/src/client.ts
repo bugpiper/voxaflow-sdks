@@ -40,6 +40,32 @@ export class VoxaClient extends EventEmitter<VoxaEventMap> {
     return this.profile.can(c);
   }
 
+  /** Self-serve marketplace signup (bootstrap — no token needed). Registers an
+   *  `END_USER` under `handle` (the tenant slug) and returns the auth result; build a
+   *  `VoxaClient` with the returned `accessToken`. The tenant must have enabled public
+   *  end-user signup. */
+  static async registerEndUser(opts: {
+    endpoint: string;
+    handle: string;
+    email: string;
+    password: string;
+    name?: string;
+  }): Promise<{ accessToken: string; refreshToken: string; user: Record<string, unknown>; tenant: Record<string, unknown> }> {
+    const res = await fetch(`${opts.endpoint}/auth/register-end-user`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ handle: opts.handle, email: opts.email, password: opts.password, ...(opts.name ? { name: opts.name } : {}) }),
+    }).catch((cause) => {
+      throw new VoxaError('CONNECTION', 'Network error during signup', { cause });
+    });
+    const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok) {
+      const code = res.status === 401 || res.status === 403 || res.status === 409 ? 'AUTH' : 'SERVER';
+      throw new VoxaError(code, (body.message as string) ?? 'Signup failed', { status: res.status });
+    }
+    return body as { accessToken: string; refreshToken: string; user: Record<string, unknown>; tenant: Record<string, unknown> };
+  }
+
   /** Open the realtime channel and validate the token. */
   async connect(): Promise<void> {
     if (this.connected) return;
