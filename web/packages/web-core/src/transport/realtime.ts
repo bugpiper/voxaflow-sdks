@@ -12,6 +12,8 @@ import {
   parseMeetingTranscript,
   parseMeetingParticipant,
   parseMeetingOutput,
+  parseCallRing,
+  parseCallSignal,
 } from '../models.js';
 
 type J = Record<string, unknown>;
@@ -55,6 +57,11 @@ export class VoxaRealtime {
     socket.on('meeting:transcript', (d: J) => this.emitter.emit('meetingTranscript', parseMeetingTranscript(d)));
     socket.on('meeting:participant', (d: J) => this.emitter.emit('meetingParticipant', parseMeetingParticipant(d)));
     socket.on('meeting:output', (d: J) => this.emitter.emit('meetingOutput', parseMeetingOutput(d)));
+    socket.on('call:ring', (d: J) => this.emitter.emit('incomingCall', parseCallRing(d)));
+    socket.on('call:accepted', (d: J) => this.emitter.emit('callSignal', parseCallSignal('accepted', d)));
+    socket.on('call:rejected', (d: J) => this.emitter.emit('callSignal', parseCallSignal('rejected', d)));
+    socket.on('call:canceled', (d: J) => this.emitter.emit('callSignal', parseCallSignal('canceled', d)));
+    socket.on('call:timeout', (d: J) => this.emitter.emit('callSignal', parseCallSignal('timeout', d)));
 
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Realtime connect timed out')), 15000);

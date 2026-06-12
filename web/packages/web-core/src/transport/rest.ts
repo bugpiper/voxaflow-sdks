@@ -20,6 +20,9 @@ export class VoxaRest {
   put<T = Record<string, unknown>>(path: string, body?: unknown): Promise<T> {
     return this.send<T>('PUT', path, body);
   }
+  delete<T = Record<string, unknown>>(path: string, body?: unknown): Promise<T> {
+    return this.send<T>('DELETE', path, body);
+  }
 
   private async send<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
     let res: Response;

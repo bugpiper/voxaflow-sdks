@@ -53,6 +53,15 @@ class VoxaClient(private val appContext: Context, config: VoxaConfig) {
     val meetingParticipant: Flow<MeetingParticipantEvent> get() = realtime.meetingParticipant
     val meetingOutput: Flow<MeetingOutputEvent> get() = realtime.meetingOutput
 
+    /** Directed incoming rings ("user X is calling you"). Show your incoming-call UI, then
+     *  [acceptCall] or [rejectCall]. */
+    val incomingCalls: Flow<VoxaCallRing> get() = realtime.incomingCalls
+
+    /** Resolution of a ring you're a party to (accepted/rejected/canceled/timeout). As the
+     *  caller, [startCall] with the callId on [VoxaCallSignalKind.ACCEPTED]; tear down the ring
+     *  UI on the others. */
+    val callSignals: Flow<VoxaCallSignal> get() = realtime.callSignals
+
     fun can(c: Capability): Boolean = profile.can(c)
 
     /** Open the realtime channel and validate the token. */
@@ -124,6 +133,64 @@ class VoxaClient(private val appContext: Context, config: VoxaConfig) {
         if (name != null) body.put("name", name)
         if (audioOnly != null) body.put("audioOnly", audioOnly)
         return rest.post("/calls/dial/$handle", body).optString("callId")
+    }
+
+    // ── Directed ringing ("dial user X → ring → accept/reject/connect") ─────────
+
+    /** Result of [inviteUser]: the new callId and when the ring expires (ISO-8601, or null). */
+    data class CallInvite(val callId: String, val expiresAt: String?)
+
+    /**
+     * Ring a specific user ([toUserId]) in your tenant. Returns the new callId (and when the
+     * ring expires). The callee receives a [VoxaCallRing] on [incomingCalls]; you receive a
+     * [VoxaCallSignal] on [callSignals] when they accept (→ then [startCall] with this callId),
+     * reject, or it times out.
+     */
+    suspend fun inviteUser(toUserId: String, video: Boolean = false, name: String? = null): CallInvite {
+        profile.requireCapability(Capability.joinCall)
+        ensureConnected()
+        val body = JSONObject().put("toUserId", toUserId).put("video", video)
+        if (name != null) body.put("name", name)
+        val res = rest.post("/calls/invite", body)
+        return CallInvite(res.optString("callId"), res.optString("expiresAt").takeIf { it.isNotEmpty() })
+    }
+
+    /**
+     * Accept an incoming ring, then join its room. Returns the live [CallSession].
+     * Equivalent to [answerCall] + [startCall] for the ringing callId.
+     */
+    suspend fun acceptCall(callId: String, video: Boolean = false, name: String? = null): CallSession {
+        ensureConnected()
+        rest.post("/calls/$callId/answer")
+        return CallSession.start(appContext, rest, realtime, callId, video, name)
+    }
+
+    /** Decline an incoming ring as the callee. */
+    suspend fun rejectCall(callId: String, reason: String? = null) {
+        val body = JSONObject()
+        if (reason != null) body.put("reason", reason)
+        rest.post("/calls/$callId/reject", body)
+    }
+
+    /** Cancel a ring you placed, before it's answered. */
+    suspend fun cancelCall(callId: String) {
+        rest.post("/calls/$callId/cancel")
+    }
+
+    /**
+     * Register this device's push token so rings reach the app when it's backgrounded/killed.
+     * [platform] is 'ios' | 'android' | 'web'; [voip] is for an iOS PushKit token. Delivery is
+     * gated on the backend having FCM/APNs creds configured.
+     */
+    suspend fun registerDevice(platform: String, token: String, voip: Boolean = false) {
+        val body = JSONObject().put("platform", platform).put("token", token)
+        if (voip) body.put("voip", true)
+        rest.post("/push/devices", body)
+    }
+
+    /** Unregister a device push token (logout / token rotation). */
+    suspend fun unregisterDevice(token: String) {
+        rest.delete("/push/devices", JSONObject().put("token", token))
     }
 
     // ── Agent operations + copilot (SDK8) ──────────────────────────────────────

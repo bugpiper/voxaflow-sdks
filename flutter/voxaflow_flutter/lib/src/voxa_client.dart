@@ -70,6 +70,15 @@ class VoxaClient {
   Stream<MeetingParticipantEvent> get meetingParticipant => _realtime.meetingParticipant;
   Stream<MeetingOutputEvent> get meetingOutput => _realtime.meetingOutput;
 
+  /// Directed incoming rings ("user X is calling you"). Show the prebuilt
+  /// [VoxaIncomingCallScreen] (foreground) or hand to [VoxaCallKit] (background).
+  Stream<VoxaCallRing> get incomingCalls => _realtime.incomingCalls;
+
+  /// Resolution of a ring you're a party to (accepted/rejected/canceled/timeout).
+  /// As the caller, join the room on [VoxaCallSignalKind.accepted]; tear down the
+  /// ring UI on the others.
+  Stream<VoxaCallSignal> get callSignals => _realtime.callSignals;
+
   /// Open the realtime channel and validate the token.
   Future<void> connect() async {
     if (_connected) return;
@@ -161,6 +170,54 @@ class VoxaClient {
       if (audioOnly != null) 'audioOnly': audioOnly,
     });
     return (res['callId'] as String?) ?? '';
+  }
+
+  // ── Directed ringing ("dial user X → ring → accept/reject/connect") ──────────
+
+  /// Ring a specific user ([toUserId]) in your tenant. Returns the new callId
+  /// (and when the ring expires). The callee receives a [VoxaCallRing] on
+  /// [incomingCalls]; you receive a [VoxaCallSignal] on [callSignals] when they
+  /// accept (→ then [startCall] with this callId), reject, or it times out.
+  Future<({String callId, DateTime? expiresAt})> inviteUser(String toUserId, {bool video = false, String? name}) async {
+    _profile.requireCapability(Capability.joinCall);
+    _ensureConnected();
+    final res = await _rest.post('/calls/invite', {
+      'toUserId': toUserId,
+      'video': video,
+      if (name != null) 'name': name,
+    });
+    return (callId: (res['callId'] as String?) ?? '', expiresAt: DateTime.tryParse((res['expiresAt'] ?? '') as String));
+  }
+
+  /// Accept an incoming ring, then join its room. Returns the live [CallSession].
+  /// Equivalent to [answerCall] + [startCall] for the ringing callId.
+  Future<CallSession> acceptCall(String callId, {bool video = false, String? name}) async {
+    _ensureConnected();
+    await _rest.post('/calls/$callId/answer');
+    return CallSession.start(rest: _rest, realtime: _realtime, callId: callId, video: video, name: name);
+  }
+
+  /// Decline an incoming ring as the callee.
+  Future<void> rejectCall(String callId, {String? reason}) async {
+    await _rest.post('/calls/$callId/reject', {if (reason != null) 'reason': reason});
+  }
+
+  /// Cancel a ring you placed, before it's answered.
+  Future<void> cancelCall(String callId) async {
+    await _rest.post('/calls/$callId/cancel');
+  }
+
+  /// Register this device's push token so rings reach the app when it's
+  /// backgrounded/killed. [platform] is 'ios' | 'android' | 'web'; set [voip] for
+  /// an iOS PushKit token (from [VoxaCallKit.voipPushToken]). Delivery is gated on
+  /// the backend having FCM/APNs creds configured.
+  Future<void> registerDevice({required String platform, required String token, bool voip = false}) async {
+    await _rest.post('/push/devices', {'platform': platform, 'token': token, if (voip) 'voip': true});
+  }
+
+  /// Unregister a device push token (logout / token rotation).
+  Future<void> unregisterDevice(String token) async {
+    await _rest.delete('/push/devices', {'token': token});
   }
 
   // ── Agent operations + copilot (SDK8), callId-scoped + capability-gated ─────

@@ -27,6 +27,8 @@ class VoxaRealtime {
   final _meetingTranscript = StreamController<MeetingTranscriptSegment>.broadcast();
   final _meetingParticipant = StreamController<MeetingParticipantEvent>.broadcast();
   final _meetingOutput = StreamController<MeetingOutputEvent>.broadcast();
+  final _incomingCall = StreamController<VoxaCallRing>.broadcast();
+  final _callSignal = StreamController<VoxaCallSignal>.broadcast();
 
   Stream<VoxaConnectionState> get connectionState => _connection.stream;
   Stream<TranscriptSegment> get transcript => _transcript.stream;
@@ -39,6 +41,8 @@ class VoxaRealtime {
   Stream<MeetingTranscriptSegment> get meetingTranscript => _meetingTranscript.stream;
   Stream<MeetingParticipantEvent> get meetingParticipant => _meetingParticipant.stream;
   Stream<MeetingOutputEvent> get meetingOutput => _meetingOutput.stream;
+  Stream<VoxaCallRing> get incomingCalls => _incomingCall.stream;
+  Stream<VoxaCallSignal> get callSignals => _callSignal.stream;
 
   Future<void> connect() => _open(awaitReady: true);
 
@@ -83,6 +87,11 @@ class VoxaRealtime {
     socket.on('meeting:transcript', (d) => _meetingTranscript.add(MeetingTranscriptSegment.fromJson(asMap(d))));
     socket.on('meeting:participant', (d) => _meetingParticipant.add(MeetingParticipantEvent.fromJson(asMap(d))));
     socket.on('meeting:output', (d) => _meetingOutput.add(MeetingOutputEvent.fromJson(asMap(d))));
+    socket.on('call:ring', (d) => _incomingCall.add(VoxaCallRing.fromJson(asMap(d))));
+    socket.on('call:accepted', (d) => _callSignal.add(VoxaCallSignal.fromJson(VoxaCallSignalKind.accepted, asMap(d))));
+    socket.on('call:rejected', (d) => _callSignal.add(VoxaCallSignal.fromJson(VoxaCallSignalKind.rejected, asMap(d))));
+    socket.on('call:canceled', (d) => _callSignal.add(VoxaCallSignal.fromJson(VoxaCallSignalKind.canceled, asMap(d))));
+    socket.on('call:timeout', (d) => _callSignal.add(VoxaCallSignal.fromJson(VoxaCallSignalKind.timeout, asMap(d))));
 
     if (!awaitReady) {
       socket.connect();
@@ -120,5 +129,7 @@ class VoxaRealtime {
     await _meetingTranscript.close();
     await _meetingParticipant.close();
     await _meetingOutput.close();
+    await _incomingCall.close();
+    await _callSignal.close();
   }
 }

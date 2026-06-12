@@ -16,6 +16,8 @@ final class VoxaRealtime {
     let meetingTranscript = PassthroughSubject<MeetingTranscriptSegment, Never>()
     let meetingParticipant = PassthroughSubject<MeetingParticipantEvent, Never>()
     let meetingOutput = PassthroughSubject<MeetingOutputEvent, Never>()
+    let incomingCalls = PassthroughSubject<VoxaCallRing, Never>()
+    let callSignals = PassthroughSubject<VoxaCallSignal, Never>()
 
     private let origin: URL
     private var token: String
@@ -60,6 +62,11 @@ final class VoxaRealtime {
         sock.on("meeting:transcript") { [weak self] d, _ in if let j = dict(d) { self?.meetingTranscript.send(.init(json: j)) } }
         sock.on("meeting:participant") { [weak self] d, _ in if let j = dict(d) { self?.meetingParticipant.send(.init(json: j)) } }
         sock.on("meeting:output") { [weak self] d, _ in if let j = dict(d) { self?.meetingOutput.send(.init(json: j)) } }
+        sock.on("call:ring") { [weak self] d, _ in if let j = dict(d) { self?.incomingCalls.send(.init(json: j)) } }
+        sock.on("call:accepted") { [weak self] d, _ in if let j = dict(d) { self?.callSignals.send(.init(kind: .accepted, json: j)) } }
+        sock.on("call:rejected") { [weak self] d, _ in if let j = dict(d) { self?.callSignals.send(.init(kind: .rejected, json: j)) } }
+        sock.on("call:canceled") { [weak self] d, _ in if let j = dict(d) { self?.callSignals.send(.init(kind: .canceled, json: j)) } }
+        sock.on("call:timeout") { [weak self] d, _ in if let j = dict(d) { self?.callSignals.send(.init(kind: .timeout, json: j)) } }
 
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             let resumed = ResumeOnce()

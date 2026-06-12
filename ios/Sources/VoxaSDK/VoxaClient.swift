@@ -49,6 +49,14 @@ public final class VoxaClient {
     public var meetingParticipant: AnyPublisher<MeetingParticipantEvent, Never> { realtime.meetingParticipant.eraseToAnyPublisher() }
     public var meetingOutput: AnyPublisher<MeetingOutputEvent, Never> { realtime.meetingOutput.eraseToAnyPublisher() }
 
+    /// Directed incoming rings ("user X is calling you"). Present an incoming-call UI,
+    /// then `acceptCall`/`rejectCall`.
+    public var incomingCalls: AnyPublisher<VoxaCallRing, Never> { realtime.incomingCalls.eraseToAnyPublisher() }
+
+    /// Resolution of a ring you're a party to (accepted/rejected/canceled/timeout).
+    /// As the caller, `startCall` with this callId on `.accepted`; tear down the ring UI on the others.
+    public var callSignals: AnyPublisher<VoxaCallSignal, Never> { realtime.callSignals.eraseToAnyPublisher() }
+
     public func can(_ c: Capability) -> Bool { profile.can(c) }
 
     /// Open the realtime channel and validate the token.
@@ -113,6 +121,52 @@ public final class VoxaClient {
         let res = try await rest.post("/calls/dial/\(handle)", body)
         return res["callId"] as? String ?? ""
     }
+
+    // MARK: Directed ringing ("dial user X → ring → accept/reject/connect")
+
+    /// Ring a specific user (`toUserId`) in your tenant. Returns the new callId and when the
+    /// ring expires. The callee receives a `VoxaCallRing` on `incomingCalls`; you receive a
+    /// `VoxaCallSignal` on `callSignals` when they accept (→ then `startCall` with this callId),
+    /// reject, or it times out.
+    @discardableResult
+    public func inviteUser(_ toUserId: String, video: Bool = false, name: String? = nil) async throws -> (callId: String, expiresAt: Date?) {
+        try profile.requireCapability(.joinCall)
+        try ensureConnected()
+        var body: [String: Any] = ["toUserId": toUserId, "video": video]
+        if let name { body["name"] = name }
+        let res = try await rest.post("/calls/invite", body)
+        let expiresAt = (res["expiresAt"] as? String).flatMap { ISO8601DateFormatter().date(from: $0) }
+        return (res["callId"] as? String ?? "", expiresAt)
+    }
+
+    /// Accept an incoming ring, then join its room. Returns the live `CallSession`.
+    public func acceptCall(_ callId: String, video: Bool = false, name: String? = nil) async throws -> CallSession {
+        try ensureConnected()
+        _ = try await rest.post("/calls/\(callId)/answer")
+        return try await CallSession.start(rest: rest, realtime: realtime, callId: callId, video: video, name: name)
+    }
+
+    /// Decline an incoming ring as the callee.
+    public func rejectCall(_ callId: String, reason: String? = nil) async throws {
+        var body: [String: Any] = [:]
+        if let reason { body["reason"] = reason }
+        _ = try await rest.post("/calls/\(callId)/reject", body)
+    }
+
+    /// Cancel a ring you placed, before it's answered.
+    public func cancelCall(_ callId: String) async throws { _ = try await rest.post("/calls/\(callId)/cancel") }
+
+    /// Register this device's push token so rings reach the app when it's backgrounded/killed.
+    /// `platform` is "ios" | "android" | "web"; set `voip` for an iOS PushKit token. Delivery is
+    /// gated on the backend having APNs/FCM creds configured.
+    public func registerDevice(platform: String, token: String, voip: Bool = false) async throws {
+        var body: [String: Any] = ["platform": platform, "token": token]
+        if voip { body["voip"] = true }
+        _ = try await rest.post("/push/devices", body)
+    }
+
+    /// Unregister a device push token (logout / token rotation).
+    public func unregisterDevice(_ token: String) async throws { _ = try await rest.delete("/push/devices", ["token": token]) }
 
     // MARK: Agent operations + copilot (SDK8)
 

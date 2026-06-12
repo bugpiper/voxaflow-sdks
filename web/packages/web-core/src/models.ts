@@ -58,6 +58,27 @@ export interface CallStatusEvent {
   durationSeconds?: number;
 }
 
+/** An incoming directed ring ("user X is calling you"). Sourced from `call:ring`. */
+export interface VoxaCallRing {
+  callId: string;
+  fromId: string;
+  fromName: string;
+  video: boolean;
+  vertical?: string;
+  expiresAt?: string;
+}
+
+export type VoxaCallSignalKind = 'accepted' | 'rejected' | 'canceled' | 'timeout';
+
+/** How a pending ring resolved for the other party. Sourced from
+ *  `call:accepted` / `call:rejected` / `call:canceled` / `call:timeout`. */
+export interface VoxaCallSignal {
+  callId: string;
+  kind: VoxaCallSignalKind;
+  by?: string;
+  reason?: string;
+}
+
 export interface AudioQuality {
   mos?: number;
   loss?: number;
@@ -188,4 +209,24 @@ export function parseMeetingParticipant(j: J): MeetingParticipantEvent {
 }
 export function parseMeetingOutput(j: J): MeetingOutputEvent {
   return { meetingId: str(j.meetingId), type: str(j.type) };
+}
+
+export function parseCallRing(j: J): VoxaCallRing {
+  const from = (j.from ?? {}) as J;
+  return {
+    callId: str(j.callId),
+    fromId: str(from.id),
+    fromName: str(from.name, 'Caller'),
+    video: bool(j.video),
+    vertical: typeof j.vertical === 'string' ? j.vertical : undefined,
+    expiresAt: typeof j.expiresAt === 'string' ? j.expiresAt : undefined,
+  };
+}
+export function parseCallSignal(kind: VoxaCallSignalKind, j: J): VoxaCallSignal {
+  return {
+    callId: str(j.callId),
+    kind,
+    by: typeof j.by === 'string' ? j.by : undefined,
+    reason: typeof j.reason === 'string' ? j.reason : undefined,
+  };
 }

@@ -106,6 +106,53 @@ data class CallStatusEvent(val callId: String, val status: String, val durationS
     }
 }
 
+/** An incoming directed ring ("user X is calling you"). From `call:ring`. */
+data class VoxaCallRing(
+    val callId: String,
+    val fromId: String,
+    val fromName: String,
+    val video: Boolean,
+    val vertical: String?,
+    val expiresAt: String?,
+) {
+    companion object {
+        fun fromJson(j: JSONObject): VoxaCallRing {
+            val from = j.optJSONObject("from") ?: JSONObject()
+            return VoxaCallRing(
+                callId = j.strOr("callId"),
+                fromId = from.strOr("id"),
+                fromName = from.strOr("name", "Caller"),
+                video = j.optBoolean("video", false),
+                vertical = j.optString("vertical").takeIf { it.isNotEmpty() },
+                expiresAt = j.optString("expiresAt").takeIf { it.isNotEmpty() },
+            )
+        }
+    }
+}
+
+/** How a pending ring resolved (for the OTHER party). From `call:accepted` /
+ *  `call:rejected` / `call:canceled` / `call:timeout`. */
+enum class VoxaCallSignalKind { ACCEPTED, REJECTED, CANCELED, TIMEOUT }
+
+/** Resolution of a directed ring you're a party to. */
+data class VoxaCallSignal(
+    val callId: String,
+    val kind: VoxaCallSignalKind,
+    /** Who accepted (for [VoxaCallSignalKind.ACCEPTED]). */
+    val by: String?,
+    /** Why it was rejected (for [VoxaCallSignalKind.REJECTED]). */
+    val reason: String?,
+) {
+    companion object {
+        fun fromJson(kind: VoxaCallSignalKind, j: JSONObject) = VoxaCallSignal(
+            callId = j.strOr("callId"),
+            kind = kind,
+            by = j.optString("by").takeIf { it.isNotEmpty() },
+            reason = j.optString("reason").takeIf { it.isNotEmpty() },
+        )
+    }
+}
+
 /** A live form-fill suggestion (agent copilot). From `GET /calls/:id/suggestions`. */
 data class Suggestion(val id: String, val fieldId: String, val value: String?, val confidence: Double?) {
     companion object {
