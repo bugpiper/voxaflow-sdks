@@ -60,6 +60,10 @@ once the room connects; on iOS, CallKit owns audio activation (handled by the pl
   `SwiftCallkitIncomingAppDelegate` you can subclass, or implement `PKPushRegistryDelegate` yourself.
   Get the token from Dart via `VoxaCallKit.voipPushToken()` and register it with your push backend.
 - `pod install` after `flutter pub get`. CallKit needs a real device for full testing (simulator is limited).
+- The example's `example/ios/Podfile` is already configured for this: `platform :ios, '13.0'` (LiveKit/CallKit
+  need a modern target) and a `post_install` block that sets `PERMISSION_MICROPHONE=1` + `PERMISSION_CAMERA=1`
+  for `permission_handler`. Copy that block into your own app's Podfile and add macros for any other
+  permissions you request (`example/macos/Podfile` has the macOS equivalent).
 
 ## Android
 
