@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
+
+import 'package:http/http.dart' as http;
 
 import 'capabilities.dart';
 import 'errors.dart';
@@ -35,6 +38,37 @@ class VoxaConfig {
 /// client.transcript.listen((seg) => print('${seg.speaker}: ${seg.text}'));
 /// ```
 class VoxaClient {
+  /// Self-serve marketplace signup (bootstrap — no token needed). Registers an
+  /// `END_USER` under [handle] (the tenant slug) and returns the auth result
+  /// (`accessToken`, `refreshToken`, `user`, `tenant`). Build a [VoxaClient] with the
+  /// returned `accessToken`. The tenant must have enabled public end-user signup.
+  ///
+  /// ```dart
+  /// final res = await VoxaClient.registerEndUser(
+  ///   endpoint: 'https://voxaflow.fastwheel.ai/api', handle: 'astro',
+  ///   email: 'me@x.com', password: 'secret123', name: 'Me');
+  /// final client = VoxaClient(VoxaConfig(endpoint: '…', token: res['accessToken']));
+  /// ```
+  static Future<Map<String, dynamic>> registerEndUser({
+    required String endpoint,
+    required String handle,
+    required String email,
+    required String password,
+    String? name,
+  }) async {
+    final res = await http.post(
+      Uri.parse('$endpoint/auth/register-end-user'),
+      headers: const {'content-type': 'application/json'},
+      body: jsonEncode({'handle': handle, 'email': email, 'password': password, if (name != null) 'name': name}),
+    );
+    final body = res.body.isNotEmpty ? jsonDecode(res.body) : const {};
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return (body as Map).cast<String, dynamic>();
+    }
+    final msg = (body is Map ? body['message'] as String? : null) ?? 'Signup failed (${res.statusCode})';
+    throw VoxaError(VoxaErrorCode.auth, msg, status: res.statusCode);
+  }
+
   VoxaClient(this.config)
       : _profile = TokenProfile.fromToken(config.token),
         _rest = VoxaRest(

@@ -93,6 +93,7 @@ Base = `config.endpoint` (e.g. `https://voxaflow.fastwheel.ai/api`). All authed 
 
 | Method | Path | Body | Response | Used by |
 |---|---|---|---|---|
+| POST | `/auth/register-end-user` (public) | `{ handle, email, password, name? }` | `{ accessToken, refreshToken, user, tenant }` | `VoxaClient.registerEndUser` (marketplace signup; tenant must opt in via `settings.endUserSignup`) |
 | POST | `/rtc/token` (public) | `{ callId, name? }` | `{ token, wsUrl, room, identity, videoConfig }` | `startCall` |
 | GET | `/rtc/config/:callId` (public) | — | `{ exists, videoConfig }` | pre-join checks |
 | POST | `/chat/widget/:handle/start` (public) | `{ contactIdentifier?, language? }` | `{ conversationId, callId, mode, disclosure, requireConsent }` | `openChat({channel})` |
