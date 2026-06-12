@@ -24,6 +24,7 @@ internal class RestClient(
     suspend fun post(path: String, body: JSONObject? = null): JSONObject = send("POST", path, body)
     suspend fun get(path: String): JSONObject = send("GET", path, null)
     suspend fun put(path: String, body: JSONObject? = null): JSONObject = send("PUT", path, body)
+    suspend fun delete(path: String, body: JSONObject? = null): JSONObject = send("DELETE", path, body)
 
     private suspend fun send(method: String, path: String, body: JSONObject?, retry: Boolean = true): JSONObject =
         withContext(Dispatchers.IO) {
@@ -32,6 +33,7 @@ internal class RestClient(
             when (method) {
                 "GET" -> builder.get()
                 "PUT" -> builder.put(rb ?: "".toRequestBody(jsonMedia))
+                "DELETE" -> if (rb != null) builder.delete(rb) else builder.delete()
                 else -> builder.post(rb ?: "".toRequestBody(jsonMedia))
             }
 

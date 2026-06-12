@@ -7,6 +7,8 @@ import type {
   VoxaConnectionState,
   ExtractedEntity,
   Suggestion,
+  VoxaCallRing,
+  VoxaCallSignal,
 } from '@voxaflow/web-core';
 import { useVoxaClient } from './context.js';
 
@@ -115,6 +117,55 @@ export function useVoxaCall(): UseVoxaCall {
   useEffect(() => () => void call?.end(), [call]);
 
   return { call, micOn, cameraOn, starting, start, end, toggleMic, toggleCamera };
+}
+
+export interface UseIncomingCall {
+  /** The current incoming ring, or null when none is pending. */
+  ring: VoxaCallRing | null;
+  /** Accept the ring and join its room; returns the live call (or null). */
+  accept: (opts?: { video?: boolean }) => Promise<CallSession | null>;
+  /** Decline the ring. */
+  reject: (reason?: string) => Promise<void>;
+}
+
+/** Surfaces the latest directed ring and resolves it. Clears automatically when the
+ *  ring is canceled/timed out by the other side (`callSignal`). */
+export function useIncomingCall(): UseIncomingCall {
+  const client = useVoxaClient();
+  const [ring, setRing] = useState<VoxaCallRing | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    const onRing = (r: VoxaCallRing) => setRing(r);
+    const onSignal = (s: VoxaCallSignal) =>
+      setRing((cur) => (cur && cur.callId === s.callId && s.kind !== 'accepted' ? null : cur));
+    client.on('incomingCall', onRing);
+    client.on('callSignal', onSignal);
+    return () => {
+      client.off('incomingCall', onRing);
+      client.off('callSignal', onSignal);
+    };
+  }, [client]);
+
+  const accept = useCallback(
+    async (opts?: { video?: boolean }) => {
+      if (!client || !ring) return null;
+      const c = await client.acceptCall(ring.callId, { video: opts?.video ?? ring.video });
+      setRing(null);
+      return c;
+    },
+    [client, ring],
+  );
+
+  const reject = useCallback(
+    async (reason?: string) => {
+      if (!client || !ring) return;
+      await client.rejectCall(ring.callId, { reason });
+      setRing(null);
+    },
+    [client, ring],
+  );
+
+  return { ring, accept, reject };
 }
 
 export interface UseVoxaChat {

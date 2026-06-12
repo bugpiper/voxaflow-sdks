@@ -35,6 +35,9 @@ class VoxaRest {
   Future<Map<String, dynamic>> put(String path, [Map<String, dynamic>? body]) =>
       _send('PUT', path, body);
 
+  Future<Map<String, dynamic>> delete(String path, [Map<String, dynamic>? body]) =>
+      _send('DELETE', path, body);
+
   Future<Map<String, dynamic>> _send(
     String method,
     String path,

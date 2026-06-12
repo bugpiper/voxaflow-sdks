@@ -44,6 +44,8 @@ class TokenProfile internal constructor(
             val caps = when (role) {
                 "SUPERVISOR", "ADMIN", "SUPER_ADMIN" -> SUPERVISOR
                 "AGENT" -> AGENT
+                // CLIENT / END_USER (guest/contact) + any unknown role → client capability set.
+                "CLIENT", "END_USER" -> CLIENT
                 else -> CLIENT
             }
             return TokenProfile(

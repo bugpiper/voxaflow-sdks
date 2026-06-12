@@ -108,6 +108,49 @@ public struct CallStatusEvent: Sendable {
     }
 }
 
+/// An incoming directed ring ("user X is calling you"). Sourced from `call:ring`.
+public struct VoxaCallRing: Sendable {
+    public let callId: String
+    public let fromId: String
+    public let fromName: String
+    public let video: Bool
+    public let vertical: String?
+    public let expiresAt: Date?
+
+    init(json j: [String: Any]) {
+        let from = j["from"] as? [String: Any] ?? [:]
+        callId = j["callId"] as? String ?? ""
+        fromId = from["id"] as? String ?? ""
+        fromName = from["name"] as? String ?? "Caller"
+        video = j["video"] as? Bool ?? false
+        vertical = j["vertical"] as? String
+        expiresAt = (j["expiresAt"] as? String).flatMap { ISO8601DateFormatter().date(from: $0) }
+    }
+}
+
+/// How a pending ring resolved (for the OTHER party). Sourced from
+/// `call:accepted` / `call:rejected` / `call:canceled` / `call:timeout`.
+public enum VoxaCallSignalKind: String, Sendable {
+    case accepted, rejected, canceled, timeout
+}
+
+/// Resolution of a directed ring you're a party to.
+public struct VoxaCallSignal: Sendable {
+    public let callId: String
+    public let kind: VoxaCallSignalKind
+    /// Who accepted (for `.accepted`).
+    public let by: String?
+    /// Why it was rejected (for `.rejected`).
+    public let reason: String?
+
+    init(kind: VoxaCallSignalKind, json j: [String: Any]) {
+        callId = j["callId"] as? String ?? ""
+        self.kind = kind
+        by = j["by"] as? String
+        reason = j["reason"] as? String
+    }
+}
+
 public struct Suggestion: Sendable {
     public let id: String
     public let fieldId: String

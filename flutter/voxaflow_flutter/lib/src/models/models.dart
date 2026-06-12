@@ -153,6 +153,62 @@ class CallStatusEvent {
       );
 }
 
+/// An incoming directed ring ("user X is calling you"). Sourced from `call:ring`.
+/// Pass straight into the prebuilt incoming UI or [VoxaCallKit].
+class VoxaCallRing {
+  const VoxaCallRing({
+    required this.callId,
+    required this.fromId,
+    required this.fromName,
+    required this.video,
+    this.vertical,
+    this.expiresAt,
+  });
+
+  final String callId;
+  final String fromId;
+  final String fromName;
+  final bool video;
+  final String? vertical;
+  final DateTime? expiresAt;
+
+  factory VoxaCallRing.fromJson(Map<String, dynamic> j) {
+    final from = (j['from'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return VoxaCallRing(
+      callId: (j['callId'] ?? '') as String,
+      fromId: (from['id'] ?? '') as String,
+      fromName: (from['name'] ?? 'Caller') as String,
+      video: (j['video'] ?? false) as bool,
+      vertical: j['vertical'] as String?,
+      expiresAt: DateTime.tryParse((j['expiresAt'] ?? '') as String),
+    );
+  }
+}
+
+/// How a pending ring resolved (for the OTHER party). Sourced from
+/// `call:accepted` / `call:rejected` / `call:canceled` / `call:timeout`.
+enum VoxaCallSignalKind { accepted, rejected, canceled, timeout }
+
+/// Resolution of a directed ring you're a party to.
+class VoxaCallSignal {
+  const VoxaCallSignal({required this.callId, required this.kind, this.by, this.reason});
+  final String callId;
+  final VoxaCallSignalKind kind;
+
+  /// Who accepted (for [VoxaCallSignalKind.accepted]).
+  final String? by;
+
+  /// Why it was rejected (for [VoxaCallSignalKind.rejected]).
+  final String? reason;
+
+  factory VoxaCallSignal.fromJson(VoxaCallSignalKind kind, Map<String, dynamic> j) => VoxaCallSignal(
+        callId: (j['callId'] ?? '') as String,
+        kind: kind,
+        by: j['by'] as String?,
+        reason: j['reason'] as String?,
+      );
+}
+
 /// Audio quality (E9 QoS). Computed from LiveKit stats client-side.
 class AudioQuality {
   const AudioQuality({this.mos, this.loss, this.jitter, this.rtt});

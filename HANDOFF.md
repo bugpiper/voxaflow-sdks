@@ -98,8 +98,27 @@ const call = await client.startCall({ video: true });
 ### Native call UX (CallKit / incoming UI / foreground service / push)
 **Wired** in the Flutter SDK as `VoxaCallKit` (CallKit on iOS; full-screen incoming notification + ConnectionService on Android; VoIP/FCM push handling) — see **`flutter/voxaflow_flutter/NATIVE_CALL_SETUP.md`** for Dart usage + the required Info.plist / AndroidManifest / PushKit-FCM config. The Dart side compiles clean; OS behavior (incoming-while-backgrounded, accept→join, lock-screen UI, audio routing) **must be verified on real devices** — it can't run headless. In-call audio routing is handled by LiveKit/WebRTC.
 
+### Prebuilt UI (now shipped — Flutter)
+The SDK ships drop-in Material widgets so apps don't hand-build call surfaces
+(exported from `package:voxaflow_flutter/voxaflow_flutter.dart`):
+- **`VoxaCallScreen(session:, client?:, …)`** — full in-call screen for any
+  `RtcSession` (1:1 `CallSession` or `MeetingSession`): adaptive video layout
+  (remote focus + draggable PiP for 1:1, grid for meetings, screen-share
+  priority), mic/camera/screen-share/hold/end control bar, call timer,
+  connection state, optional live-transcript panel.
+- **`VoxaIncomingCallScreen(call:, onAccept:, onDecline:)`** — branded in-app
+  ringing screen (pulse animation, accept/video/decline). Complements the native
+  `VoxaCallKit` ring used for background/killed-app.
+- **`VoxaCallOverlay` / `VoxaCallOverlayController`** — draggable floating
+  mini-call (PiP) you can float over the whole app via the root `Overlay`.
+- **`VoxaParticipantTile`**, **`VoxaCallControlBar`**, **`VoxaCallTheme`**
+  (Midnight Intelligence tokens; `.midnight()` / `.light()`) — reusable building
+  blocks. The example app wires "Prebuilt UI" + "Incoming" buttons.
+- `dart analyze` clean for both `lib/` and `example/`.
+
 ### Known gaps (not built / not in scope here)
-- Rich UI is minimal/light-styled (Midnight Intelligence design tokens not yet applied). Flutter UI widgets beyond the example aren't built.
+- Directed ring/invite signaling (call user X → ring → accept/reject) is a
+  **backend** gap, not an SDK one — see the SDK's incoming-call flow notes.
 - Proximity sensor + a custom Bluetooth-route picker UI (LiveKit handles the routing itself; a custom picker isn't built).
 - Not published to pub.dev/npm yet — consume via path/workspace for now.
 

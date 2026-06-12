@@ -53,6 +53,12 @@ VoxaClient(config: { endpoint, token, onTokenRefresh? })
   // Client engagement (SDK9):
   requestCall(handle, { name?, audioOnly? }) -> { callId, … }  // requires joinCall
 
+  // Directed ringing (SDK10) — "dial user X → ring → accept/reject/connect":
+  inviteUser(toUserId, { video?, name? }) -> { callId, expiresAt }  // requires joinCall
+  acceptCall(callId, { video?, name? }) -> CallSession              // callee answers + joins
+  rejectCall(callId, { reason? })                                  // callee declines
+  cancelCall(callId)                                               // caller cancels before answer
+
   // Agent ops + copilot (SDK8) — callId-scoped, capability-gated:
   getActiveCalls() · answerCall(id) · holdCall(id)             // callControl
   transferCall(id, toAgentId)                                  // transfer
@@ -62,7 +68,8 @@ VoxaClient(config: { endpoint, token, onTokenRefresh? })
   getSummary(id)                                               // copilot
 
   events: connectionState, transcript, entityExtracted, formUpdate, message, typing,
-          presence, callStatus, meetingTranscript, meetingParticipant, meetingOutput, error
+          presence, callStatus, meetingTranscript, meetingParticipant, meetingOutput, error,
+          incomingCalls (VoxaCallRing), callSignals (accepted/rejected/canceled/timeout)
 
 CallSession   (wraps the platform LiveKit Room — `lkRoom`/`room` escape hatch)
   setMicEnabled(bool) · setMuted(bool) · setCameraEnabled(bool)
@@ -94,6 +101,12 @@ Base = `config.endpoint` (e.g. `https://voxaflow.fastwheel.ai/api`). All authed 
 | POST | `/chat/conversations/:id/typing` | — | `204` | `setTyping(true)` |
 | POST | `/chat/conversations/:id/read` | — | `200` | `markRead` |
 | PUT | `/agents/presence` | `{ status }` | `{ ok, status }` | `setPresence` |
+| POST | `/calls/invite` | `{ toUserId, video?, name? }` | `{ callId, expiresAt }` | `inviteUser` (directed ring) |
+| POST | `/calls/:id/answer` | — | `{ ok, status }` | `acceptCall` (callee) |
+| POST | `/calls/:id/reject` | `{ reason? }` | `{ ok, status }` | `rejectCall` (callee) |
+| POST | `/calls/:id/cancel` | — | `{ ok, status }` | `cancelCall` (caller) |
+| POST | `/push/devices` | `{ platform, token, voip? }` | `{ ok, count }` | `registerDevice` (background ring delivery) |
+| DELETE | `/push/devices` | `{ token }` | `{ ok, count }` | `unregisterDevice` |
 | POST | `/meetings` · POST `/meetings/:id/token` | … | LiveKit token | `joinMeeting` (planned) |
 | GET/PUT | `/calls/:id/form`, `/calls/:id/entities`, `/calls/:id/suggestions`, `/calls/:id/summary` | … | … | agent copilot APIs (planned) |
 
@@ -122,6 +135,11 @@ Base = `config.endpoint` (e.g. `https://voxaflow.fastwheel.ai/api`). All authed 
 | `chat:typing` | `{ conversationId, sender }` | `typing` |
 | `presence:update` | `{ userId, status }` | `presence` |
 | `call:status` | `{ callId, status, durationSeconds? }` | `callStatus` |
+| `call:ring` | `{ callId, from:{id,name}, video, vertical?, expiresAt }` | `incomingCalls` (VoxaCallRing) |
+| `call:accepted` | `{ callId, by }` | `callSignals` (accepted) |
+| `call:rejected` | `{ callId, reason? }` | `callSignals` (rejected) |
+| `call:canceled` | `{ callId }` | `callSignals` (canceled) |
+| `call:timeout` | `{ callId }` | `callSignals` (timeout) |
 | `call:incoming`, `call:transfer`, `call:supervisor`, `waiting:update`, `meeting:transcript`, `meeting:output`, `meeting:participant`, `chat:status` | see backend `shared-types` | (planned SDK surfacing) |
 
 `speaker` ∈ `AGENT`/`CALLER`; `sender` ∈ `CONTACT`/`AGENT`/`BOT`/`SYSTEM`; `status` ∈ call/presence enums.

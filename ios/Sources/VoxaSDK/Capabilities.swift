@@ -40,6 +40,7 @@ public struct TokenProfile: Sendable {
         switch role {
         case "SUPERVISOR", "ADMIN", "SUPER_ADMIN": caps = supervisor
         case "AGENT": caps = agent
+        // CLIENT / END_USER / guest / non-JWT all fall through to the client capability set.
         default: caps = client
         }
         return TokenProfile(

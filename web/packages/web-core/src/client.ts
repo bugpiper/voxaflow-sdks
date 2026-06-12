@@ -113,6 +113,42 @@ export class VoxaClient extends EventEmitter<VoxaEventMap> {
     return res;
   }
 
+  // ── Directed ringing (SDK10): "dial user X → ring → accept/reject/connect" ──
+
+  /** Ring a specific user in your tenant. The callee gets an `incomingCall` event;
+   *  you get a `callSignal` (accepted → then `startCall(callId)`, or rejected/timeout). */
+  async inviteUser(toUserId: string, opts: { video?: boolean; name?: string } = {}): Promise<{ callId: string; expiresAt?: string }> {
+    this.profile.requireCapability('joinCall');
+    this.ensureConnected();
+    return this.rest.post<{ callId: string; expiresAt?: string }>('/calls/invite', { toUserId, video: opts.video ?? false, ...(opts.name ? { name: opts.name } : {}) });
+  }
+
+  /** Accept an incoming ring as the callee, then join its room. */
+  async acceptCall(callId: string, opts: { video?: boolean; name?: string } = {}): Promise<CallSession> {
+    this.ensureConnected();
+    await this.rest.post(`/calls/${callId}/answer`);
+    return CallSession.start({ rest: this.rest, realtime: this.realtime, callId, video: opts.video, name: opts.name });
+  }
+
+  /** Decline an incoming ring as the callee. */
+  async rejectCall(callId: string, opts: { reason?: string } = {}): Promise<void> {
+    await this.rest.post(`/calls/${callId}/reject`, opts.reason ? { reason: opts.reason } : undefined);
+  }
+
+  /** Cancel a ring you placed, before it's answered. */
+  async cancelCall(callId: string): Promise<void> {
+    await this.rest.post(`/calls/${callId}/cancel`);
+  }
+
+  /** Register this browser/device push token for background incoming-call delivery
+   *  (gated on backend push creds). `platform` is 'web' | 'ios' | 'android'. */
+  async registerDevice(platform: 'web' | 'ios' | 'android', token: string, opts: { voip?: boolean } = {}): Promise<void> {
+    await this.rest.post('/push/devices', { platform, token, ...(opts.voip ? { voip: true } : {}) });
+  }
+  async unregisterDevice(token: string): Promise<void> {
+    await this.rest.delete('/push/devices', { token });
+  }
+
   // ── Agent operations (SDK8) ────────────────────────────────────────────────
 
   /** Active calls visible to this agent (own + shared queue). */

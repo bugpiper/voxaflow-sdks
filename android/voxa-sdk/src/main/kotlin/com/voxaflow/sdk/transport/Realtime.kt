@@ -27,6 +27,8 @@ internal class VoxaRealtime(endpoint: String, @Volatile private var token: Strin
     val meetingTranscript = MutableSharedFlow<MeetingTranscriptSegment>(extraBufferCapacity = 64)
     val meetingParticipant = MutableSharedFlow<MeetingParticipantEvent>(extraBufferCapacity = 64)
     val meetingOutput = MutableSharedFlow<MeetingOutputEvent>(extraBufferCapacity = 64)
+    val incomingCalls = MutableSharedFlow<VoxaCallRing>(extraBufferCapacity = 64)
+    val callSignals = MutableSharedFlow<VoxaCallSignal>(extraBufferCapacity = 64)
 
     private val origin: String
     private var socket: Socket? = null
@@ -62,6 +64,11 @@ internal class VoxaRealtime(endpoint: String, @Volatile private var token: Strin
         sock.on("meeting:transcript") { a -> dict(a)?.let { meetingTranscript.tryEmit(MeetingTranscriptSegment.fromJson(it)) } }
         sock.on("meeting:participant") { a -> dict(a)?.let { meetingParticipant.tryEmit(MeetingParticipantEvent.fromJson(it)) } }
         sock.on("meeting:output") { a -> dict(a)?.let { meetingOutput.tryEmit(MeetingOutputEvent.fromJson(it)) } }
+        sock.on("call:ring") { a -> dict(a)?.let { incomingCalls.tryEmit(VoxaCallRing.fromJson(it)) } }
+        sock.on("call:accepted") { a -> dict(a)?.let { callSignals.tryEmit(VoxaCallSignal.fromJson(VoxaCallSignalKind.ACCEPTED, it)) } }
+        sock.on("call:rejected") { a -> dict(a)?.let { callSignals.tryEmit(VoxaCallSignal.fromJson(VoxaCallSignalKind.REJECTED, it)) } }
+        sock.on("call:canceled") { a -> dict(a)?.let { callSignals.tryEmit(VoxaCallSignal.fromJson(VoxaCallSignalKind.CANCELED, it)) } }
+        sock.on("call:timeout") { a -> dict(a)?.let { callSignals.tryEmit(VoxaCallSignal.fromJson(VoxaCallSignalKind.TIMEOUT, it)) } }
         return sock
     }
 

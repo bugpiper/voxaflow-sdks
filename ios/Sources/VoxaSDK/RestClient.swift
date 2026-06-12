@@ -25,6 +25,10 @@ final class VoxaRest {
     func put(_ path: String, _ body: [String: Any]? = nil) async throws -> [String: Any] {
         try await send("PUT", path, body)
     }
+    @discardableResult
+    func delete(_ path: String, _ body: [String: Any]? = nil) async throws -> [String: Any] {
+        try await send("DELETE", path, body)
+    }
 
     private func send(_ method: String, _ path: String, _ body: [String: Any]?, retry: Bool = true) async throws -> [String: Any] {
         guard let url = URL(string: endpoint + path) else {

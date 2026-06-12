@@ -109,6 +109,8 @@ class _CallScreenState extends State<CallScreen> {
   void initState() {
     super.initState();
     _subs.add(widget.client.connectionState.listen((s) => setState(() => _conn = s)));
+    // Directed ring: when someone calls this user, show the prebuilt incoming UI.
+    _subs.add(widget.client.incomingCalls.listen(_onIncomingRing));
     _subs.add(widget.client.transcript.listen((seg) => setState(() {
           if (seg.isFinal) {
             if (seg.id == null || _finals.every((f) => f.id != seg.id)) _finals.add(seg);
@@ -130,6 +132,69 @@ class _CallScreenState extends State<CallScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Demonstrates the prebuilt drop-in [VoxaCallScreen] (Gap 4 fix): starts a
+  /// video call and hands it to the SDK's ready-made in-call UI.
+  Future<void> _openPrebuiltCall() async {
+    setState(() => _busy = true);
+    try {
+      await Permission.microphone.request();
+      await Permission.camera.request();
+      final call = await widget.client.startCall(video: true);
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => VoxaCallScreen(
+          session: call,
+          client: widget.client,
+          title: 'Consultation',
+          showTranscript: true,
+          onEnded: () => Navigator.of(context).maybePop(),
+        ),
+      ));
+    } on VoxaError catch (e) {
+      _snack(e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// A real directed ring arrived (`call:ring`): show the prebuilt incoming
+  /// screen; on accept, join via [VoxaClient.acceptCall] and open the call UI.
+  Future<void> _onIncomingRing(VoxaCallRing ring) async {
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (ctx) => VoxaIncomingCallScreen(
+        call: VoxaIncomingCall(callId: ring.callId, callerName: ring.fromName, video: ring.video),
+        onAccept: ({required video}) async {
+          Navigator.of(ctx).pop();
+          await Permission.microphone.request();
+          if (video) await Permission.camera.request();
+          final call = await widget.client.acceptCall(ring.callId, video: video);
+          if (!mounted) return;
+          await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => VoxaCallScreen(session: call, client: widget.client, onEnded: () => Navigator.of(context).maybePop()),
+          ));
+        },
+        onDecline: () {
+          Navigator.of(ctx).pop();
+          widget.client.rejectCall(ring.callId);
+        },
+      ),
+    ));
+  }
+
+  /// Previews the prebuilt incoming-call (ringing) UI without a real push.
+  void _previewIncoming() {
+    Navigator.of(context).push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (ctx) => VoxaIncomingCallScreen(
+        call: const VoxaIncomingCall(callId: 'preview', callerName: 'Astrologer Maya', video: true),
+        onAccept: ({required video}) => Navigator.of(ctx).pop(),
+        onDecline: () => Navigator.of(ctx).pop(),
+      ),
+    ));
   }
 
   Future<void> _toggleMic() async {
@@ -191,6 +256,18 @@ class _CallScreenState extends State<CallScreen> {
                     onPressed: _busy ? null : () => _startCall(video: true),
                     icon: const Icon(Icons.videocam),
                     label: const Text('Video'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _openPrebuiltCall,
+                    icon: const Icon(Icons.dashboard_customize),
+                    label: const Text('Prebuilt UI'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _previewIncoming,
+                    icon: const Icon(Icons.ring_volume),
+                    label: const Text('Incoming'),
                   ),
                 ] else ...[
                   IconButton.filledTonal(
