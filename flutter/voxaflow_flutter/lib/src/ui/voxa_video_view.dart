@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
+import 'package:flutter_webrtc/flutter_webrtc.dart' show RTCVideoViewObjectFit;
 
 import 'voxa_call_theme.dart';
 
@@ -45,7 +46,7 @@ class VoxaParticipantTile extends StatefulWidget {
     this.theme = const VoxaCallTheme.midnight(),
     this.isLocal = false,
     this.mirror,
-    this.fit = lk.VideoViewFit.cover,
+    this.fit = RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
     this.showLabel = true,
     this.borderRadius = 16,
   });
@@ -56,7 +57,7 @@ class VoxaParticipantTile extends StatefulWidget {
 
   /// Mirror the video horizontally. Defaults to true for the local camera.
   final bool? mirror;
-  final lk.VideoViewFit fit;
+  final RTCVideoViewObjectFit fit;
   final bool showLabel;
   final double borderRadius;
 

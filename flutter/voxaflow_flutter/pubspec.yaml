@@ -17,9 +17,16 @@ dependencies:
   socket_io_client: ^2.0.3
   # REST (token mint/refresh, /rtc/token, chat, etc.)
   http: ^1.2.0
-  # Native call UX: CallKit (iOS) + full-screen incoming UI / ConnectionService (Android).
-  # Mobile-only — for web targets use @voxaflow/web-core instead.
-  flutter_callkit_incoming: ^2.0.0
+  # Native call UX (CallKit / full-screen incoming) is provided by
+  # flutter_callkit_incoming, but it ships Android classes in the same namespace as
+  # Zego's flutter_callkit_incoming_yoer fork and cannot coexist with Zego. While the
+  # host app still has Zego, this dep is disabled and VoxaCallKit is stubbed
+  # (see lib/src/native/voxa_callkit.dart). Re-enable once Zego is removed.
+  # flutter_callkit_incoming: ^2.0.0
+  # Direct dep so the prebuilt video widgets can name RTCVideoViewObjectFit
+  # (livekit_client 2.3.x exposes that, not its own VideoViewFit). Unified with
+  # livekit's transitive flutter_webrtc by pub.
+  flutter_webrtc: ^0.12.0
 
 dev_dependencies:
   flutter_test:

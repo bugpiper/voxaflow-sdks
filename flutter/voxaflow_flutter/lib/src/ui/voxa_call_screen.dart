@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
+import 'package:flutter_webrtc/flutter_webrtc.dart' show RTCVideoViewObjectFit;
 
 import '../models/models.dart';
 import '../sessions/call_session.dart';
@@ -337,7 +338,7 @@ class _VoxaCallScreenState extends State<VoxaCallScreen> {
               borderRadius: BorderRadius.circular(16),
               child: Container(
                 color: t.surfaceVariant,
-                child: lk.VideoTrackRenderer(share, fit: lk.VideoViewFit.contain),
+                child: lk.VideoTrackRenderer(share, fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain),
               ),
             ),
           ),

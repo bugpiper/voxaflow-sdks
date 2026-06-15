@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
+import 'package:flutter_webrtc/flutter_webrtc.dart' show RTCVideoViewObjectFit;
 
 import '../sessions/call_session.dart';
 import 'voxa_call_theme.dart';
@@ -104,7 +105,7 @@ class _VoxaCallOverlayState extends State<VoxaCallOverlay> {
                     fit: StackFit.expand,
                     children: [
                       if (video != null)
-                        lk.VideoTrackRenderer(video, fit: lk.VideoViewFit.cover)
+                        lk.VideoTrackRenderer(video, fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
                       else
                         Center(child: Icon(Icons.phone_in_talk, color: t.onSurfaceMuted, size: 28)),
                       Positioned(

@@ -48,9 +48,13 @@ class VoxaRest {
     http.Response res;
     try {
       final req = http.Request(method, uri)
-        ..headers['authorization'] = 'Bearer $_token'
-        ..headers['content-type'] = 'application/json';
-      if (body != null) req.body = jsonEncode(body);
+        ..headers['authorization'] = 'Bearer $_token';
+      // Only declare a JSON content-type when there's actually a body — Fastify
+      // rejects an empty body sent with content-type: application/json (HTTP 400).
+      if (body != null) {
+        req.headers['content-type'] = 'application/json';
+        req.body = jsonEncode(body);
+      }
       res = await http.Response.fromStream(await _http.send(req));
     } catch (e) {
       throw VoxaError(VoxaErrorCode.connection, 'Network error calling $path', cause: e);
