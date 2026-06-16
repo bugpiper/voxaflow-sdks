@@ -72,6 +72,7 @@ class _VoxaCallScreenState extends State<VoxaCallScreen> {
   bool _screenSharing = false;
   bool _held = false;
   bool _ending = false;
+  bool _hadRemote = false;
   Offset _pipOffset = const Offset(16, 16);
 
   final List<TranscriptSegment> _finals = [];
@@ -104,7 +105,37 @@ class _VoxaCallScreenState extends State<VoxaCallScreen> {
   void _onRoomChange() {
     if (!mounted) return;
     _syncLocalState();
+    // End the screen when the call is over from the other side — the remote
+    // participant left after joining, or the room itself disconnected. Without
+    // this, the local side keeps showing a frozen call after the peer hangs up.
+    if (_maybeAutoEnd()) return;
     setState(() {});
+  }
+
+  /// Detects a remote-initiated end. Returns true once teardown has started so
+  /// the caller skips the normal UI rebuild.
+  bool _maybeAutoEnd() {
+    if (_ending) return true;
+    final remotes = _room.remoteParticipants.length;
+    if (remotes > 0) _hadRemote = true;
+    final remoteLeft = _hadRemote && remotes == 0;
+    final disconnected =
+        _room.connectionState == lk.ConnectionState.disconnected;
+    if (remoteLeft || disconnected) {
+      _autoEnd();
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _autoEnd() async {
+    if (_ending) return;
+    _ending = true;
+    if (mounted) setState(() {});
+    try {
+      await widget.session.end();
+    } catch (_) {}
+    widget.onEnded?.call();
   }
 
   void _syncLocalState() {
