@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 
@@ -60,14 +62,45 @@ class VoxaCallAction {
 ///
 /// Mobile-only — not available on web (use `@voxaflow/web-core` there).
 class VoxaCallKit {
+  // CallKit identifies every call by a **UUID**. Voxa callIds are NOT UUIDs, and
+  // flutter_callkit_incoming force-unwraps `UUID(uuidString: id)!` — a non-UUID
+  // id makes it unwrap nil and crash (EXC_BREAKPOINT) the moment a ring shows.
+  // So map each Voxa callId ↔ a generated UUID: pass the UUID to CallKit, carry
+  // the real callId in `extra`, and translate native actions back to it.
+  static final Map<String, String> _callIdToUuid = {};
+  static final Map<String, String> _uuidToCallId = {};
+
+  // callIds marked connected. iOS flutter_callkit_incoming 2.5.8's setCallConnected
+  // re-issues a CXAnswerCallAction (CallManager.connectedCall), which the plugin
+  // re-emits as ACTION_CALL_ACCEPT — a *spurious second accept*. Tracking connected
+  // calls lets [_map] downgrade that echo to `connected`, so it never re-triggers a
+  // consumer's accept→join (which would duplicate-join the room and double-answer).
+  static final Set<String> _connected = {};
+
+  static String _uuidFor(String callId) => _callIdToUuid.putIfAbsent(callId, () {
+        final u = _genUuid();
+        _uuidToCallId[u] = callId;
+        return u;
+      });
+
+  static String _genUuid() {
+    final r = Random();
+    final b = List<int>.generate(16, (_) => r.nextInt(256));
+    b[6] = (b[6] & 0x0f) | 0x40; // version 4
+    b[8] = (b[8] & 0x3f) | 0x80; // variant
+    String h(int i) => b[i].toRadixString(16).padLeft(2, '0');
+    return '${h(0)}${h(1)}${h(2)}${h(3)}-${h(4)}${h(5)}-${h(6)}${h(7)}-'
+        '${h(8)}${h(9)}-${h(10)}${h(11)}${h(12)}${h(13)}${h(14)}${h(15)}';
+  }
+
   static CallKitParams _params(VoxaIncomingCall c) => CallKitParams(
-        id: c.callId,
+        id: _uuidFor(c.callId),
         nameCaller: c.callerName,
         appName: c.appName,
         avatar: c.avatar,
         handle: c.handle,
         type: c.video ? 1 : 0,
-        extra: c.extra ?? <String, dynamic>{},
+        extra: {...?c.extra, 'voxaCallId': c.callId},
       );
 
   /// Show the native INCOMING call UI (ringing).
@@ -79,13 +112,24 @@ class VoxaCallKit {
       FlutterCallkitIncoming.startCall(_params(call));
 
   /// Mark the call connected — call this right after the Voxa LiveKit room is joined.
-  static Future<void> setConnected(String callId) => FlutterCallkitIncoming.setCallConnected(callId);
+  /// NOTE (iOS, flutter_callkit_incoming 2.5.8): this re-issues a CXAnswerCallAction,
+  /// so the plugin emits a duplicate `accepted` event; [_connected] + [_map] absorb it.
+  static Future<void> setConnected(String callId) {
+    _connected.add(callId);
+    return FlutterCallkitIncoming.setCallConnected(_uuidFor(callId));
+  }
 
   /// End one call's system UI.
-  static Future<void> end(String callId) => FlutterCallkitIncoming.endCall(callId);
+  static Future<void> end(String callId) {
+    _connected.remove(callId);
+    return FlutterCallkitIncoming.endCall(_uuidFor(callId));
+  }
 
   /// End all system call UI (e.g. on logout).
-  static Future<void> endAll() => FlutterCallkitIncoming.endAllCalls();
+  static Future<void> endAll() {
+    _connected.clear();
+    return FlutterCallkitIncoming.endAllCalls();
+  }
 
   /// Calls the OS currently shows (use on relaunch to reconcile state).
   static Future<dynamic> activeCalls() => FlutterCallkitIncoming.activeCalls();
@@ -116,8 +160,14 @@ class VoxaCallKit {
 
   static VoxaCallAction _map(CallEvent e) {
     final body = (e.body is Map) ? Map<String, dynamic>.from(e.body as Map) : <String, dynamic>{};
-    final callId = (body['id'] ?? '').toString();
-    final type = switch (e.event) {
+    // Translate CallKit's UUID back to the real Voxa callId: prefer the value we
+    // stashed in `extra` (survives a cold-start push), else the in-memory map.
+    final rawId = (body['id'] ?? '').toString();
+    final extra = body['extra'];
+    final callId = (extra is Map ? extra['voxaCallId']?.toString() : null) ??
+        _uuidToCallId[rawId] ??
+        rawId;
+    var type = switch (e.event) {
       Event.actionCallIncoming => VoxaCallActionType.incoming,
       Event.actionCallStart => VoxaCallActionType.started,
       Event.actionCallAccept => VoxaCallActionType.accepted,
@@ -131,6 +181,11 @@ class VoxaCallKit {
       Event.actionDidUpdateDevicePushTokenVoip => VoxaCallActionType.pushTokenUpdated,
       _ => VoxaCallActionType.unknown,
     };
+    // Swallow the duplicate `accepted` that setCallConnected synthesizes on iOS:
+    // if this call is already connected, surface it as `connected`, not a fresh accept.
+    if (type == VoxaCallActionType.accepted && _connected.contains(callId)) {
+      type = VoxaCallActionType.connected;
+    }
     return VoxaCallAction(type, callId, body);
   }
 }
