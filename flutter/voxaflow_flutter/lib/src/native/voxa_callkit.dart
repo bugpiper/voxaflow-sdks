@@ -13,6 +13,12 @@ class VoxaIncomingCall {
     this.avatar,
     this.appName = 'Voxa',
     this.extra,
+    this.backgroundColor,
+    this.accentColor,
+    this.textColor,
+    this.notificationChannelName,
+    this.ringtonePath,
+    this.logo,
   });
 
   /// The Voxa callId/meetingId to (re)join when accepted.
@@ -23,6 +29,28 @@ class VoxaIncomingCall {
   final String? avatar;
   final String appName;
   final Map<String, dynamic>? extra;
+
+  // ── Android incoming-call UI branding (hex colors like '#5F0204'). When null
+  // the plugin's defaults are used. iOS uses the system CallKit look. ──────────
+  /// Full-screen incoming-call background.
+  final String? backgroundColor;
+
+  /// Accept/decline action accent.
+  final String? accentColor;
+
+  /// Foreground text color.
+  final String? textColor;
+
+  /// Android notification channel label shown in system settings.
+  final String? notificationChannelName;
+
+  /// Custom ringtone (Android raw resource name / asset); null = system default.
+  final String? ringtonePath;
+
+  /// Image shown at the TOP of the Android incoming screen (e.g. an app
+  /// wordmark). A Flutter asset path (bundled in flutter_assets) or http(s) URL.
+  /// null = no top logo.
+  final String? logo;
 }
 
 enum VoxaCallActionType {
@@ -101,6 +129,19 @@ class VoxaCallKit {
         handle: c.handle,
         type: c.video ? 1 : 0,
         extra: {...?c.extra, 'voxaCallId': c.callId},
+        // Brand the native Android incoming-call UI. Null fields fall back to the
+        // plugin defaults; the full-screen + heads-up surfaces use these colors.
+        android: AndroidParams(
+          isShowFullLockedScreen: true,
+          isImportant: true,
+          isShowLogo: c.logo != null,
+          logoUrl: c.logo,
+          backgroundColor: c.backgroundColor,
+          actionColor: c.accentColor,
+          textColor: c.textColor,
+          ringtonePath: c.ringtonePath,
+          incomingCallNotificationChannelName: c.notificationChannelName,
+        ),
       );
 
   /// Show the native INCOMING call UI (ringing).
