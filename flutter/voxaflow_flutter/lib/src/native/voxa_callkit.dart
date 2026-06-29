@@ -167,6 +167,16 @@ class VoxaCallKit {
     final callId = (extra is Map ? extra['voxaCallId']?.toString() : null) ??
         _uuidToCallId[rawId] ??
         rawId;
+    // Learn CallKit's UUID for this call from the event itself. On a killed-app
+    // VoIP push the CallKit call is created NATIVELY (iOS AppDelegate) with a UUID
+    // our Dart map never saw — the real callId rides in extra['voxaCallId']. Record
+    // the pairing so a later end()/setConnected() resolves to the SAME UUID; without
+    // it they'd mint a different UUID and fail to dismiss the call, leaving the
+    // system call live after hang-up.
+    if (rawId.isNotEmpty && callId.isNotEmpty && callId != rawId) {
+      _callIdToUuid[callId] = rawId;
+      _uuidToCallId[rawId] = callId;
+    }
     var type = switch (e.event) {
       Event.actionCallIncoming => VoxaCallActionType.incoming,
       Event.actionCallStart => VoxaCallActionType.started,
