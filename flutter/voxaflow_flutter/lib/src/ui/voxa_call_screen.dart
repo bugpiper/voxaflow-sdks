@@ -73,6 +73,7 @@ class _VoxaCallScreenState extends State<VoxaCallScreen> {
   bool _held = false;
   bool _ending = false;
   bool _hadRemote = false;
+  bool _wasConnected = false;
   Offset _pipOffset = const Offset(16, 16);
 
   final List<TranscriptSegment> _finals = [];
@@ -116,10 +117,14 @@ class _VoxaCallScreenState extends State<VoxaCallScreen> {
   /// the caller skips the normal UI rebuild.
   bool _maybeAutoEnd() {
     if (_ending) return true;
+    if (_room.connectionState == lk.ConnectionState.connected) _wasConnected = true;
     final remotes = _room.remoteParticipants.length;
     if (remotes > 0) _hadRemote = true;
     final remoteLeft = _hadRemote && remotes == 0;
-    final disconnected =
+    // Only treat a disconnect as an end once we've actually connected — a
+    // transient disconnected/connecting read before the room settles (more
+    // likely on an audio-only join) must not tear down a freshly-built call.
+    final disconnected = _wasConnected &&
         _room.connectionState == lk.ConnectionState.disconnected;
     if (remoteLeft || disconnected) {
       _autoEnd();
