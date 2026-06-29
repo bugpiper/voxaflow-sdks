@@ -134,6 +134,39 @@ class VoxaCallKit {
   /// Calls the OS currently shows (use on relaunch to reconcile state).
   static Future<dynamic> activeCalls() => FlutterCallkitIncoming.activeCalls();
 
+  /// Recover a killed-app accept whose native action fired before [actions] was
+  /// subscribed. When the app is launched by tapping Accept on a ringing call
+  /// from a KILLED state, the `ACTION_CALL_ACCEPT` event is emitted during
+  /// startup — before any Dart listener exists — and is dropped ([actions] is a
+  /// broadcast stream with no replay), so the call never joins. This queries the
+  /// OS for an already-accepted call and returns it as an [accepted]
+  /// [VoxaCallAction] so the app can run its normal accept→join path. Returns
+  /// null when no accepted call is pending (the common case on a normal launch).
+  static Future<VoxaCallAction?> pendingAcceptedCall() async {
+    final calls = await FlutterCallkitIncoming.activeCalls();
+    if (calls is! List) return null;
+    for (final c in calls) {
+      // Only an explicitly-accepted call — never a still-ringing one.
+      if (c is! Map || c['isAccepted'] != true) continue;
+      final body = Map<String, dynamic>.from(c);
+      final rawId = (body['id'] ?? '').toString();
+      final extra = body['extra'];
+      final callId = (extra is Map ? extra['voxaCallId']?.toString() : null) ??
+          _uuidToCallId[rawId] ??
+          rawId;
+      if (callId.isEmpty) continue;
+      // Learn CallKit's UUID for this call (created natively by the push, so our
+      // Dart map never saw it) so a later end()/setConnected resolves the SAME
+      // UUID instead of minting a new one and failing to dismiss the call.
+      if (rawId.isNotEmpty && callId != rawId) {
+        _callIdToUuid[callId] = rawId;
+        _uuidToCallId[rawId] = callId;
+      }
+      return VoxaCallAction(VoxaCallActionType.accepted, callId, body);
+    }
+    return null;
+  }
+
   /// The iOS VoIP-push (PushKit) device token, for registering with your push backend.
   static Future<dynamic> voipPushToken() => FlutterCallkitIncoming.getDevicePushTokenVoIP();
 
