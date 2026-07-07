@@ -35,5 +35,6 @@ class VoxaError implements Exception {
 
   @override
   String toString() => 'VoxaError(${code.name}): $message'
-      '${status != null ? ' [HTTP $status]' : ''}';
+      '${status != null ? ' [HTTP $status]' : ''}'
+      '${cause != null ? ' — cause: $cause' : ''}';
 }

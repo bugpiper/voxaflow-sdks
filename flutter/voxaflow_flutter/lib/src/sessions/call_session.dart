@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
 
 import '../errors.dart';
@@ -64,13 +65,32 @@ class CallSession extends RtcSession {
     }
 
     final room = lk.Room();
+    // Connecting to the room IS the join — this is the only fatal step. If it
+    // fails we tear down and surface it.
     try {
       await room.connect(wsUrl, token);
-      await room.localParticipant?.setMicrophoneEnabled(true);
-      if (video) await room.localParticipant?.setCameraEnabled(true);
     } catch (e) {
       await room.dispose();
-      throw VoxaError(VoxaErrorCode.media, 'Failed to join the call room', cause: e);
+      throw VoxaError(VoxaErrorCode.connection,
+          'Failed to connect to the call room',
+          cause: e);
+    }
+
+    // The room is joined. Enabling the local mic/camera is best-effort: a device
+    // error (permission denied, camera busy, a transient platform/WebRTC error)
+    // must NOT tear down an otherwise-live call. The user can (re)enable devices
+    // from the in-call controls, which reflect the real track state.
+    try {
+      await room.localParticipant?.setMicrophoneEnabled(true);
+    } catch (e) {
+      debugPrint('[Voxa] mic enable failed (call stays connected): $e');
+    }
+    if (video) {
+      try {
+        await room.localParticipant?.setCameraEnabled(true);
+      } catch (e) {
+        debugPrint('[Voxa] camera enable failed (call stays connected): $e');
+      }
     }
 
     // Subscribe to this call's data events (transcript/entities/form) + replay.
