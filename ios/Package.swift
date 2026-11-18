@@ -15,13 +15,17 @@ let package = Package(
         .package(url: "https://github.com/socketio/socket.io-client-swift.git", from: "16.1.0"),
     ],
     targets: [
+        // Pure, LiveKit-free auto-rejoin logic (unit-testable in isolation).
+        .target(name: "VoxaRejoin"),
         .target(
             name: "VoxaSDK",
             dependencies: [
+                "VoxaRejoin",
                 .product(name: "LiveKit", package: "client-sdk-swift"),
                 .product(name: "SocketIO", package: "socket.io-client-swift"),
             ]
         ),
         .testTarget(name: "VoxaSDKTests", dependencies: ["VoxaSDK"]),
+        .testTarget(name: "VoxaRejoinTests", dependencies: ["VoxaRejoin"]),
     ]
 )
