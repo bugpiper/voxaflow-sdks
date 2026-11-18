@@ -85,7 +85,7 @@ export class VoxaClient extends EventEmitter<VoxaEventMap> {
   }
 
   /** Start (or join) a voice/video call. Omit `callId` for an ephemeral room. */
-  async startCall(opts: { callId?: string; video?: boolean; name?: string } = {}): Promise<CallSession> {
+  async startCall(opts: { callId?: string; video?: boolean; name?: string; autoRejoin?: boolean } = {}): Promise<CallSession> {
     this.profile.requireCapability(opts.video ? 'joinVideo' : 'joinCall');
     this.ensureConnected();
     return CallSession.start({
@@ -94,6 +94,7 @@ export class VoxaClient extends EventEmitter<VoxaEventMap> {
       callId: opts.callId ?? ephemeralId('call'),
       video: opts.video,
       name: opts.name,
+      autoRejoin: opts.autoRejoin,
     });
   }
 
@@ -106,7 +107,7 @@ export class VoxaClient extends EventEmitter<VoxaEventMap> {
 
   /** Join a multi-party meeting by id. Per-speaker transcript / participant / output events
    *  arrive on the meeting* events. */
-  async joinMeeting(meetingId: string, opts: { video?: boolean; displayName?: string; role?: string; language?: string } = {}): Promise<MeetingSession> {
+  async joinMeeting(meetingId: string, opts: { video?: boolean; displayName?: string; role?: string; language?: string; autoRejoin?: boolean } = {}): Promise<MeetingSession> {
     this.profile.requireCapability(opts.video ? 'joinVideo' : 'joinCall');
     this.ensureConnected();
     return MeetingSession.join({ rest: this.rest, realtime: this.realtime, meetingId, ...opts });
@@ -150,10 +151,10 @@ export class VoxaClient extends EventEmitter<VoxaEventMap> {
   }
 
   /** Accept an incoming ring as the callee, then join its room. */
-  async acceptCall(callId: string, opts: { video?: boolean; name?: string } = {}): Promise<CallSession> {
+  async acceptCall(callId: string, opts: { video?: boolean; name?: string; autoRejoin?: boolean } = {}): Promise<CallSession> {
     this.ensureConnected();
     await this.rest.post(`/calls/${callId}/answer`);
-    return CallSession.start({ rest: this.rest, realtime: this.realtime, callId, video: opts.video, name: opts.name });
+    return CallSession.start({ rest: this.rest, realtime: this.realtime, callId, video: opts.video, name: opts.name, autoRejoin: opts.autoRejoin });
   }
 
   /** Decline an incoming ring as the callee. */

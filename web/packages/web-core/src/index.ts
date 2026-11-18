@@ -5,6 +5,8 @@ export type { VoxaErrorCode } from './errors.js';
 export { TokenProfile } from './capabilities.js';
 export type { Capability } from './capabilities.js';
 export { CallSession, RtcSession } from './sessions/call.js';
+export type { RtcSessionEventMap } from './sessions/call.js';
+export { shouldAutoRejoin, rejoinDelay, REJOIN_DELAYS_MS, REJOIN_GIVE_UP_MS } from './sessions/rejoin.js';
 export { ChatSession } from './sessions/chat.js';
 export { MeetingSession } from './sessions/meeting.js';
 export type { VoxaEventMap } from './events.js';

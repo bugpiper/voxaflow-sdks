@@ -18,6 +18,7 @@ export {
 // RN-native components
 export { CallView, type CallViewProps } from './components/CallView.js';
 export { ChatWidget, type ChatWidgetProps } from './components/ChatWidget.js';
+export { bindAppStateRejoin, type AppStateLike } from './appStateRejoin.js';
 
 // Core types
 export type {
