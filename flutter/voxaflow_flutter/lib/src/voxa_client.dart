@@ -135,7 +135,7 @@ class VoxaClient {
   /// Start (or join) a voice/video call. If [callId] is omitted, an ephemeral room
   /// id is generated (good for direct/click-to-call). Transcript/entity/form events
   /// for the call then arrive on this client's streams.
-  Future<CallSession> startCall({String? callId, bool video = false, String? name}) async {
+  Future<CallSession> startCall({String? callId, bool video = false, String? name, bool autoRejoin = true}) async {
     _profile.requireCapability(video ? Capability.joinVideo : Capability.joinCall);
     _ensureConnected();
     return CallSession.start(
@@ -144,6 +144,7 @@ class VoxaClient {
       callId: callId ?? _ephemeralId('call'),
       video: video,
       name: name,
+      autoRejoin: autoRejoin,
     );
   }
 
@@ -159,7 +160,7 @@ class VoxaClient {
 
   /// Join a multi-party meeting by [meetingId]. Per-speaker transcript / participant /
   /// output events arrive on the meeting* streams.
-  Future<MeetingSession> joinMeeting(String meetingId, {bool video = false, String? displayName, String? role, String? language}) async {
+  Future<MeetingSession> joinMeeting(String meetingId, {bool video = false, String? displayName, String? role, String? language, bool autoRejoin = true}) async {
     _profile.requireCapability(video ? Capability.joinVideo : Capability.joinCall);
     _ensureConnected();
     return MeetingSession.join(
@@ -170,6 +171,7 @@ class VoxaClient {
       displayName: displayName,
       role: role,
       language: language,
+      autoRejoin: autoRejoin,
     );
   }
 
@@ -225,10 +227,10 @@ class VoxaClient {
 
   /// Accept an incoming ring, then join its room. Returns the live [CallSession].
   /// Equivalent to [answerCall] + [startCall] for the ringing callId.
-  Future<CallSession> acceptCall(String callId, {bool video = false, String? name}) async {
+  Future<CallSession> acceptCall(String callId, {bool video = false, String? name, bool autoRejoin = true}) async {
     _ensureConnected();
     await _rest.post('/calls/$callId/answer');
-    return CallSession.start(rest: _rest, realtime: _realtime, callId: callId, video: video, name: name);
+    return CallSession.start(rest: _rest, realtime: _realtime, callId: callId, video: video, name: name, autoRejoin: autoRejoin);
   }
 
   /// Decline an incoming ring as the callee.

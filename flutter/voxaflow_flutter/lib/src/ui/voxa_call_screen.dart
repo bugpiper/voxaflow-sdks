@@ -8,6 +8,7 @@ import '../sessions/call_session.dart';
 import '../voxa_client.dart';
 import 'voxa_call_controls.dart';
 import 'voxa_call_theme.dart';
+import 'voxa_reconnect_banner.dart';
 import 'voxa_video_view.dart';
 
 /// A full, drop-in in-call screen for a [CallSession] or [MeetingSession]
@@ -186,6 +187,15 @@ class _VoxaCallScreenState extends State<VoxaCallScreen> {
         child: Column(
           children: [
             _header(t),
+            StreamBuilder<VoxaConnectionState>(
+              stream: widget.session.connectionState,
+              initialData: widget.session.state,
+              builder: (_, snap) => VoxaReconnectBanner(
+                state: snap.data ?? VoxaConnectionState.connected,
+                onRejoin: widget.session.rejoinNow,
+                theme: t,
+              ),
+            ),
             Expanded(child: _stage(t)),
             if (widget.showTranscript && widget.client != null) _transcriptPanel(t),
             VoxaCallControlBar(

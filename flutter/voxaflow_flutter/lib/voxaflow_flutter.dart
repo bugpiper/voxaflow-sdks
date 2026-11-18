@@ -7,7 +7,8 @@ library voxaflow_flutter;
 export 'src/voxa_client.dart' show VoxaClient, VoxaConfig;
 export 'src/capabilities.dart' show Capability, TokenProfile;
 export 'src/errors.dart' show VoxaError, VoxaErrorCode;
-export 'src/sessions/call_session.dart' show CallSession, RtcSession;
+export 'src/sessions/call_session.dart' show CallSession, RtcSession, LiveKitCreds;
+export 'src/sessions/rejoin.dart' show VoxaRejoinAttempt, shouldAutoRejoin, rejoinDelay, rejoinDelaysMs, rejoinGiveUp;
 export 'src/sessions/chat_session.dart' show ChatSession;
 export 'src/sessions/meeting_session.dart' show MeetingSession;
 export 'src/native/voxa_callkit.dart' show VoxaCallKit, VoxaIncomingCall, VoxaCallAction, VoxaCallActionType;
@@ -20,5 +21,6 @@ export 'src/ui/voxa_call_controls.dart' show VoxaCallControlBar, VoxaControlButt
 export 'src/ui/voxa_video_view.dart'
     show VoxaParticipantTile, voxaCameraTrack, voxaScreenShareTrack, voxaParticipantLabel;
 export 'src/ui/voxa_call_screen.dart' show VoxaCallScreen;
+export 'src/ui/voxa_reconnect_banner.dart' show VoxaReconnectBanner;
 export 'src/ui/voxa_incoming_call_screen.dart' show VoxaIncomingCallScreen;
 export 'src/ui/voxa_call_overlay.dart' show VoxaCallOverlay, VoxaCallOverlayController;
