@@ -7,10 +7,13 @@ import 'voxa_call_theme.dart';
 /// and with "Rejoin" once it gives up. Renders nothing while connected/connecting.
 /// Drive it from `session.connectionState` and pass `session.rejoinNow`.
 class VoxaReconnectBanner extends StatelessWidget {
-  const VoxaReconnectBanner({super.key, required this.state, required this.onRejoin, this.theme = const VoxaCallTheme()});
+  const VoxaReconnectBanner({super.key, required this.state, required this.onRejoin, this.attempt = 0, this.theme = const VoxaCallTheme()});
 
   final VoxaConnectionState state;
   final VoidCallback onRejoin;
+
+  /// Current auto-rejoin attempt (`session.rejoinAttemptNumber`); 0 hides "(attempt n)".
+  final int attempt;
   final VoxaCallTheme theme;
 
   @override
@@ -30,7 +33,9 @@ class VoxaReconnectBanner extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                reconnecting ? 'Connection lost — reconnecting…' : 'Disconnected',
+                reconnecting
+                    ? 'Connection lost — reconnecting…${attempt > 0 ? ' (attempt $attempt)' : ''}'
+                    : 'Connection lost. Check your network, then rejoin.',
                 style: TextStyle(color: theme.onSurface, fontSize: 13),
               ),
             ),

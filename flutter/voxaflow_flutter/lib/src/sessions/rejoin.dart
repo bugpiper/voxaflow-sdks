@@ -178,6 +178,10 @@ class RejoinController {
   VoxaConnectionState _state = VoxaConnectionState.connected;
   bool _ended = false;
   bool _rejoining = false;
+  int _attempt = 0;
+
+  /// 1-based number of the current auto-rejoin try (0 when not rejoining).
+  int get attempt => _attempt;
 
   Stream<VoxaConnectionState> get states => _states.stream;
   Stream<VoxaRejoinAttempt> get attempts => _attempts.stream;
@@ -228,6 +232,7 @@ class RejoinController {
   Future<void> _start() async {
     if (_ended || _rejoining) return;
     _rejoining = true;
+    _attempt = 0;
     _set(VoxaConnectionState.reconnecting);
     _readiness ??= LifecycleReadiness(_waker);
     final outcome = await runRejoinLoop(
@@ -238,10 +243,12 @@ class RejoinController {
       delayFor: _delayFor,
       giveUpAfter: _giveUpAfter,
       onAttempt: (a, d) {
+        _attempt = a;
         if (!_attempts.isClosed) _attempts.add(VoxaRejoinAttempt(a, d));
       },
     );
     _rejoining = false;
+    _attempt = 0;
     if (outcome == RejoinOutcome.joined) {
       _onRejoined();
       _set(VoxaConnectionState.connected);

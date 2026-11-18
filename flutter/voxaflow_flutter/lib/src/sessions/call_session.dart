@@ -34,8 +34,11 @@ abstract class RtcSession {
   Stream<VoxaConnectionState> get connectionState => _rejoin.states;
   VoxaConnectionState get state => _rejoin.state;
 
-  /// Each scheduled auto-rejoin attempt.
+  /// Each auto-rejoin try, as it starts.
   Stream<VoxaRejoinAttempt> get rejoinAttempts => _rejoin.attempts;
+
+  /// 1-based number of the current auto-rejoin try (0 when not rejoining) — for "(attempt n)" UI.
+  int get rejoinAttemptNumber => _rejoin.attempt;
 
   /// Retry now: cuts the back-off wait short, or restarts after auto-rejoin gave up. No-op while connected.
   void rejoinNow() => _rejoin.rejoinNow();

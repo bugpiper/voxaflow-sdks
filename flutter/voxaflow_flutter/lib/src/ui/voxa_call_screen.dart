@@ -5,6 +5,7 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 
 import '../models/models.dart';
 import '../sessions/call_session.dart';
+import '../sessions/rejoin.dart' show VoxaRejoinAttempt;
 import '../voxa_client.dart';
 import 'voxa_call_controls.dart';
 import 'voxa_call_theme.dart';
@@ -190,10 +191,14 @@ class _VoxaCallScreenState extends State<VoxaCallScreen> {
             StreamBuilder<VoxaConnectionState>(
               stream: widget.session.connectionState,
               initialData: widget.session.state,
-              builder: (_, snap) => VoxaReconnectBanner(
-                state: snap.data ?? VoxaConnectionState.connected,
-                onRejoin: widget.session.rejoinNow,
-                theme: t,
+              builder: (_, snap) => StreamBuilder<VoxaRejoinAttempt>(
+                stream: widget.session.rejoinAttempts,
+                builder: (_, __) => VoxaReconnectBanner(
+                  state: snap.data ?? VoxaConnectionState.connected,
+                  attempt: widget.session.rejoinAttemptNumber,
+                  onRejoin: widget.session.rejoinNow,
+                  theme: t,
+                ),
               ),
             ),
             Expanded(child: _stage(t)),

@@ -235,6 +235,18 @@ void main() {
       expect(rejoined, 1);
     });
 
+    test('exposes the current attempt number (0 when not rejoining)', () async {
+      final c = make(delay: (_) => const Duration(seconds: 30));
+      failNext = 0;
+      unawaited(c.onDisconnected(DisconnectReason.unknown));
+      await pump();
+      expect(c.attempt, 0); // waiting before try 1
+      c.rejoinNow();
+      await pump();
+      expect(c.state, VoxaConnectionState.connected);
+      expect(c.attempt, 0); // reset after success
+    });
+
     test('intentional end → disconnected, no rejoin', () async {
       for (final r in [DisconnectReason.clientInitiated, DisconnectReason.roomDeleted]) {
         final c = make();

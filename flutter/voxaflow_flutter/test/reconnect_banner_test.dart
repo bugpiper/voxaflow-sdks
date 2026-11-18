@@ -13,8 +13,8 @@ void main() {
 
   testWidgets('reconnecting: banner + "Rejoin now" calls onRejoin', (t) async {
     var taps = 0;
-    await t.pumpWidget(host(VoxaReconnectBanner(state: VoxaConnectionState.reconnecting, onRejoin: () => taps++)));
-    expect(find.text('Connection lost — reconnecting…'), findsOneWidget);
+    await t.pumpWidget(host(VoxaReconnectBanner(state: VoxaConnectionState.reconnecting, attempt: 2, onRejoin: () => taps++)));
+    expect(find.text('Connection lost — reconnecting… (attempt 2)'), findsOneWidget);
     await t.tap(find.text('Rejoin now'));
     expect(taps, 1);
   });
@@ -22,7 +22,7 @@ void main() {
   testWidgets('disconnected (gave up): "Disconnected" + "Rejoin"', (t) async {
     var taps = 0;
     await t.pumpWidget(host(VoxaReconnectBanner(state: VoxaConnectionState.disconnected, onRejoin: () => taps++)));
-    expect(find.text('Disconnected'), findsOneWidget);
+    expect(find.text('Connection lost. Check your network, then rejoin.'), findsOneWidget);
     await t.tap(find.text('Rejoin'));
     expect(taps, 1);
   });
