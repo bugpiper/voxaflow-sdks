@@ -67,6 +67,8 @@ export interface UseVoxaCall {
   starting: boolean;
   /** Media state of the current call (auto-rejoin: `reconnecting` → `connected`, or `disconnected` on give-up). */
   callState: VoxaConnectionState;
+  /** Current auto-rejoin attempt number (0 when not rejoining). */
+  rejoinAttempt: number;
   /** Retry the call connection now (cuts the back-off wait, or restarts after give-up). */
   rejoinNow: () => void;
   start: (opts?: { callId?: string; video?: boolean; name?: string; autoRejoin?: boolean }) => Promise<void>;
@@ -83,6 +85,7 @@ export function useVoxaCall(): UseVoxaCall {
   const [cameraOn, setCameraOn] = useState(false);
   const [starting, setStarting] = useState(false);
   const [callState, setCallState] = useState<VoxaConnectionState>('disconnected');
+  const [rejoinAttempt, setRejoinAttempt] = useState(0);
 
   useEffect(() => {
     if (!call) {
@@ -90,10 +93,17 @@ export function useVoxaCall(): UseVoxaCall {
       return;
     }
     setCallState(call.state);
-    const h = (s: VoxaConnectionState) => setCallState(s);
+    setRejoinAttempt(call.rejoinAttemptNumber);
+    const h = (s: VoxaConnectionState) => {
+      setCallState(s);
+      setRejoinAttempt(call.rejoinAttemptNumber);
+    };
+    const a = (e: { attempt: number }) => setRejoinAttempt(e.attempt);
     call.on('connectionState', h);
+    call.on('rejoinAttempt', a);
     return () => {
       call.off('connectionState', h);
+      call.off('rejoinAttempt', a);
     };
   }, [call]);
 
@@ -136,7 +146,7 @@ export function useVoxaCall(): UseVoxaCall {
 
   useEffect(() => () => void call?.end(), [call]);
 
-  return { call, micOn, cameraOn, starting, callState, rejoinNow, start, end, toggleMic, toggleCamera };
+  return { call, micOn, cameraOn, starting, callState, rejoinAttempt, rejoinNow, start, end, toggleMic, toggleCamera };
 }
 
 export interface UseIncomingCall {

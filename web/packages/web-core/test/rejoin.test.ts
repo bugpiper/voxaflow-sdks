@@ -63,7 +63,8 @@ describe('runRejoinLoop', () => {
     expect(await runRejoinLoop({ join, ...c, waitReady: ready, cancelled: () => false, onAttempt })).toBe('joined');
     expect(join).toHaveBeenCalledTimes(3);
     expect(c.sleep.mock.calls.map((x) => x[0])).toEqual([500, 2000, 5000]);
-    expect(onAttempt.mock.calls).toEqual([[1, 500], [2, 2000], [3, 5000]]);
+    // fired right before each try (after the wait + readiness), with the wait before the NEXT try
+    expect(onAttempt.mock.calls).toEqual([[1, 2000], [2, 5000], [3, 10000]]);
   });
 
   it('keeps trying past the schedule (30s apart) and gives up only after 10 minutes', async () => {
@@ -80,8 +81,8 @@ describe('runRejoinLoop', () => {
     const order: string[] = [];
     const join = vi.fn(async () => { order.push('join'); });
     const waitReady = vi.fn(async () => { order.push('ready'); });
-    await runRejoinLoop({ join, ...c, waitReady, cancelled: () => false });
-    expect(order).toEqual(['ready', 'join']);
+    await runRejoinLoop({ join, ...c, waitReady, cancelled: () => false, onAttempt: (a) => order.push(`attempt${a}`) });
+    expect(order).toEqual(['ready', 'attempt1', 'join']);
   });
 
   it('stops without joining once cancelled (user left)', async () => {
@@ -114,5 +115,25 @@ describe('Waker', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(done).toBe(true);
     vi.useRealTimers();
+  });
+});
+
+import { rejoinNowAction } from '../src/sessions/rejoin.js';
+
+describe('rejoinNowAction ("Rejoin now" button)', () => {
+  it('wakes the back-off wait while our rejoin loop runs', () => {
+    expect(rejoinNowAction({ left: false, rejoining: true, roomState: 'disconnected' })).toBe('wake');
+  });
+  it('restarts only when the room is really disconnected (after give-up)', () => {
+    expect(rejoinNowAction({ left: false, rejoining: false, roomState: 'disconnected' })).toBe('restart');
+  });
+  it("does nothing while LiveKit's own short resume runs (room not disconnected) — no double-connect", () => {
+    for (const roomState of ['reconnecting', 'signalReconnecting', 'connecting', 'connected']) {
+      expect(rejoinNowAction({ left: false, rejoining: false, roomState }), roomState).toBe('ignore');
+    }
+  });
+  it('does nothing after leave', () => {
+    expect(rejoinNowAction({ left: true, rejoining: true, roomState: 'disconnected' })).toBe('ignore');
+    expect(rejoinNowAction({ left: true, rejoining: false, roomState: 'disconnected' })).toBe('ignore');
   });
 });

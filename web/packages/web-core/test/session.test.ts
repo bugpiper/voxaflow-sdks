@@ -62,6 +62,7 @@ describe('browserReadiness', () => {
 
 /** Fake LiveKit Room: connect() succeeds/fails per script; disconnect() emits 'disconnected'. */
 class FakeRoom extends EventEmitter {
+  state = 'connected';
   connects = 0;
   failNext = 0;
   mic: boolean[] = [];
@@ -73,10 +74,11 @@ class FakeRoom extends EventEmitter {
   };
   async connect() {
     this.connects++;
-    if (this.failNext > 0) { this.failNext--; throw new Error('offline'); }
+    if (this.failNext > 0) { this.failNext--; this.state = 'disconnected'; throw new Error('offline'); }
+    this.state = 'connected';
   }
-  async disconnect() {}
-  drop(reason?: number) { this.emit('disconnected', reason); }
+  async disconnect() { this.state = 'disconnected'; }
+  drop(reason?: number) { this.state = 'disconnected'; this.emit('disconnected', reason); }
 }
 
 class TestSession extends RtcSession {
@@ -174,5 +176,42 @@ describe('RtcSession auto-rejoin', () => {
     await vi.advanceTimersByTimeAsync(5 * 60_000);
     expect(room.connects).toBe(n);
     expect(s.state).toBe('disconnected');
+  });
+
+  it("rejoinNow() is ignored while LiveKit's own resume runs (room reconnecting)", async () => {
+    vi.useFakeTimers();
+    const room = new FakeRoom();
+    const s = new TestSession(room);
+    room.state = 'reconnecting';
+    room.emit('reconnecting');
+    expect(s.state).toBe('reconnecting');
+    s.rejoinNow();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(room.connects).toBe(0);
+  });
+
+  it('rejoinNow() after end() does nothing', async () => {
+    vi.useFakeTimers();
+    const room = new FakeRoom();
+    const s = new TestSession(room);
+    await s.end();
+    s.rejoinNow();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(room.connects).toBe(0);
+  });
+
+  it('exposes the current attempt number for the banner', async () => {
+    vi.useFakeTimers();
+    const room = new FakeRoom();
+    room.failNext = 2;
+    const s = new TestSession(room);
+    const seen: number[] = [];
+    s.on('rejoinAttempt', (e) => seen.push(e.attempt));
+    room.drop(9);
+    await vi.advanceTimersByTimeAsync(500 + 2000);
+    expect(s.rejoinAttemptNumber).toBe(2);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(seen).toEqual([1, 2, 3]);
+    expect(s.state).toBe('connected');
   });
 });

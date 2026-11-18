@@ -115,10 +115,11 @@ void main() {
       );
       expect(r, RejoinOutcome.joined);
       expect(c.slept.map((d) => d.inMilliseconds), [500, 2000, 5000]);
+      // fired right before each try, with the wait before the NEXT try
       expect(attempts, [
-        [1, 500],
-        [2, 2000],
-        [3, 5000]
+        [1, 2000],
+        [2, 5000],
+        [3, 10000]
       ]);
     });
 
@@ -150,8 +151,9 @@ void main() {
         waitReady: () async => order.add('ready'),
         cancelled: () => false,
         now: c.now,
+        onAttempt: (a, _) => order.add('attempt$a'),
       );
-      expect(order, ['ready', 'join']);
+      expect(order, ['ready', 'attempt1', 'join']);
     });
 
     test('stops once cancelled (user left)', () async {

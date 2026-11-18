@@ -4,14 +4,14 @@ import { VoxaError } from '../errors.js';
 import type { VoxaRest } from '../transport/rest.js';
 import type { VoxaRealtime } from '../transport/realtime.js';
 import type { VoxaConnectionState } from '../models.js';
-import { Waker, browserReadiness, runRejoinLoop, shouldAutoRejoin } from './rejoin.js';
+import { Waker, browserReadiness, rejoinNowAction, runRejoinLoop, shouldAutoRejoin } from './rejoin.js';
 
 /** Per-session events (the media connection of THIS call/meeting — distinct from the client's
  *  `connectionState`, which is the realtime socket). */
 export interface RtcSessionEventMap {
   /** `connected` → (`reconnecting` → `connected`)* → `disconnected`. */
   connectionState: (state: VoxaConnectionState) => void;
-  /** An auto-rejoin attempt is scheduled `nextDelayMs` from now (1-based `attempt`). */
+  /** An auto-rejoin try is starting (1-based `attempt`); if it fails the next comes `nextDelayMs` later. */
   rejoinAttempt: (e: { attempt: number; nextDelayMs: number }) => void;
 }
 
@@ -30,7 +30,7 @@ export abstract class RtcSession extends EventEmitter<RtcSessionEventMap> {
   private _state: VoxaConnectionState = 'connected';
   private ended = false;
   private rejoining = false;
-  private gaveUp = false;
+  private _attempt = 0;
   private wantMic = true;
   private wantCam = false;
   private readonly waker = new Waker();
@@ -63,6 +63,11 @@ export abstract class RtcSession extends EventEmitter<RtcSessionEventMap> {
     return this._state;
   }
 
+  /** 1-based number of the current auto-rejoin attempt (0 when not rejoining) — for "(attempt n)" UI. */
+  get rejoinAttemptNumber(): number {
+    return this._attempt;
+  }
+
   /** Fetch fresh LiveKit credentials for this session's room (POST /rtc/token or the meeting token). */
   protected abstract fetchCreds(): Promise<LiveKitCreds>;
   /** Re-subscribe the realtime socket to this session's events after a rejoin. */
@@ -92,15 +97,14 @@ export abstract class RtcSession extends EventEmitter<RtcSessionEventMap> {
     return this.setMicEnabled(true);
   }
 
-  /** Retry the connection immediately: cuts the current back-off wait short, or — after
-   *  auto-rejoin gave up (`disconnected`) — starts a new rejoin loop. No-op while connected. */
+  /** Retry the connection immediately: cuts the current back-off wait short, or — once the room
+   *  is really disconnected (auto-rejoin gave up) — starts a new rejoin loop. Ignored while
+   *  LiveKit's own short resume is running, while connected, and after end(). */
   rejoinNow(): void {
-    if (this.ended) return;
-    if (this.rejoining) {
-      this.waker.wake();
-    } else if (this.gaveUp || this._state === 'disconnected') {
-      void this.startRejoin();
-    }
+    const roomState = String((this.room as unknown as { state?: string }).state ?? 'disconnected');
+    const action = rejoinNowAction({ left: this.ended, rejoining: this.rejoining, roomState });
+    if (action === 'wake') this.waker.wake();
+    else if (action === 'restart') void this.startRejoin();
   }
 
   /** Leave the call. Cancels any in-flight auto-rejoin. */
@@ -132,7 +136,7 @@ export abstract class RtcSession extends EventEmitter<RtcSessionEventMap> {
   private async startRejoin(): Promise<void> {
     if (this.ended || this.rejoining) return;
     this.rejoining = true;
-    this.gaveUp = false;
+    this._attempt = 0;
     this.setState('reconnecting');
     this.readiness ??= browserReadiness(this.waker);
     const outcome = await runRejoinLoop({
@@ -140,14 +144,17 @@ export abstract class RtcSession extends EventEmitter<RtcSessionEventMap> {
       sleep: (ms) => this.waker.sleep(ms),
       waitReady: () => this.readiness!.waitReady(),
       cancelled: () => this.ended,
-      onAttempt: (attempt, nextDelayMs) => this.emit('rejoinAttempt', { attempt, nextDelayMs }),
+      onAttempt: (attempt, nextDelayMs) => {
+        this._attempt = attempt;
+        this.emit('rejoinAttempt', { attempt, nextDelayMs });
+      },
     });
     this.rejoining = false;
+    this._attempt = 0;
     if (outcome === 'joined') {
       this.rejoinRealtime();
       this.setState('connected');
     } else if (outcome === 'gaveUp') {
-      this.gaveUp = true;
       this.setState('disconnected');
     }
   }

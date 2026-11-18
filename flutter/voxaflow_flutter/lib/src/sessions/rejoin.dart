@@ -56,12 +56,12 @@ Future<RejoinOutcome> runRejoinLoop({
   final start = clock();
   for (var i = 0;; i++) {
     if (cancelled()) return RejoinOutcome.cancelled;
-    final delay = delayFor(i);
-    onAttempt?.call(i + 1, delay);
-    await sleep(delay);
+    await sleep(delayFor(i));
     if (cancelled()) return RejoinOutcome.cancelled;
     await waitReady();
     if (cancelled()) return RejoinOutcome.cancelled;
+    // Reported right before the try; the delay is the wait before the next try if this one fails.
+    onAttempt?.call(i + 1, delayFor(i + 1));
     try {
       await join();
       return cancelled() ? RejoinOutcome.cancelled : RejoinOutcome.joined;
@@ -137,7 +137,7 @@ class LifecycleReadiness with WidgetsBindingObserver implements RejoinReadiness 
   void dispose() => WidgetsBinding.instance.removeObserver(this);
 }
 
-/// One auto-rejoin attempt is scheduled [nextDelay] from now.
+/// An auto-rejoin try is starting ([attempt], 1-based); if it fails the next comes [nextDelay] later.
 class VoxaRejoinAttempt {
   const VoxaRejoinAttempt(this.attempt, this.nextDelay);
   final int attempt;

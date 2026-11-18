@@ -15,7 +15,7 @@ export interface CallViewProps {
  */
 export function CallView({ video = false, accentColor = '#4f46e5' }: CallViewProps): JSX.Element {
   const conn = useConnectionState();
-  const { call, micOn, starting, callState, rejoinNow, start, end, toggleMic } = useVoxaCall();
+  const { call, micOn, starting, callState, rejoinAttempt, rejoinNow, start, end, toggleMic } = useVoxaCall();
   const { finals, interim } = useTranscript();
   const inCall = call !== null;
   // Foreground → retry a dropped call immediately (RN has no page-visibility signal).
@@ -46,7 +46,9 @@ export function CallView({ video = false, accentColor = '#4f46e5' }: CallViewPro
       </View>
       {inCall && (callState === 'reconnecting' || callState === 'disconnected') && (
         <View style={[styles.banner, callState === 'disconnected' && styles.bannerDown]} accessibilityRole="alert">
-          <Text style={styles.bannerText}>{callState === 'reconnecting' ? 'Connection lost — reconnecting…' : 'Disconnected'}</Text>
+          <Text style={styles.bannerText}>{callState === 'reconnecting'
+              ? `Connection lost — reconnecting…${rejoinAttempt ? ` (attempt ${rejoinAttempt})` : ''}`
+              : 'Connection lost. Check your network, then rejoin.'}</Text>
           <Pressable style={styles.btn} onPress={rejoinNow}>
             <Text>{callState === 'reconnecting' ? 'Rejoin now' : 'Rejoin'}</Text>
           </Pressable>

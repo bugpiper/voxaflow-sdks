@@ -44,18 +44,19 @@ export async function runRejoinLoop(deps: {
   waitReady: () => Promise<void>;
   cancelled: () => boolean;
   now?: () => number;
-  onAttempt?: (attempt: number, delayMs: number) => void;
+  /** Right before each try: 1-based attempt + the wait before the next try if it fails. */
+  onAttempt?: (attempt: number, nextDelayMs: number) => void;
 }): Promise<RejoinOutcome> {
   const now = deps.now ?? Date.now;
   const start = now();
   for (let i = 0; ; i++) {
     if (deps.cancelled()) return 'cancelled';
-    const delay = rejoinDelay(i);
-    deps.onAttempt?.(i + 1, delay);
-    await deps.sleep(delay);
+    await deps.sleep(rejoinDelay(i));
     if (deps.cancelled()) return 'cancelled';
     await deps.waitReady();
     if (deps.cancelled()) return 'cancelled';
+    // Reported right before the try; nextDelayMs = the wait before the next try if this one fails.
+    deps.onAttempt?.(i + 1, rejoinDelay(i + 1));
     try {
       await deps.join();
       return deps.cancelled() ? 'cancelled' : 'joined';
@@ -125,4 +126,12 @@ export function browserReadiness(waker: Waker): { isReady: () => boolean; waitRe
       if (hasWin) window.removeEventListener('online', onChange);
     },
   };
+}
+
+/** What `rejoinNow()` / the "Rejoin now" button does. While LiveKit's own short-blip resume runs,
+ *  the room is not 'disconnected' yet — starting a fresh join on top of it would double-connect. */
+export function rejoinNowAction(s: { left: boolean; rejoining: boolean; roomState: string }): 'wake' | 'restart' | 'ignore' {
+  if (s.left) return 'ignore';
+  if (s.rejoining) return 'wake';
+  return s.roomState === 'disconnected' ? 'restart' : 'ignore';
 }
