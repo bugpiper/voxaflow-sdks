@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useConnectionState, useTranscript, useVoxaCall } from '../hooks.js';
+import { ReconnectBanner } from './ReconnectBanner.js';
 
 export interface CallViewProps {
   /** Start with video enabled. */
@@ -14,7 +15,7 @@ export interface CallViewProps {
  */
 export function CallView({ video = false, style }: CallViewProps): JSX.Element {
   const conn = useConnectionState();
-  const { call, micOn, starting, start, end, toggleMic } = useVoxaCall();
+  const { call, micOn, starting, callState, rejoinAttempt, rejoinNow, start, end, toggleMic } = useVoxaCall();
   const { finals, interim } = useTranscript();
   const inCall = call !== null;
 
@@ -33,6 +34,7 @@ export function CallView({ video = false, style }: CallViewProps): JSX.Element {
         )}
         <span style={{ marginLeft: 'auto', fontSize: 12, color: '#6b7280' }}>{conn}</span>
       </div>
+      {inCall && <ReconnectBanner state={callState} attempt={rejoinAttempt} onRejoin={rejoinNow} />}
       <div style={{ flex: 1, overflowY: 'auto', padding: 12 }} aria-live="polite">
         {finals.length === 0 && Object.keys(interim).length === 0 && (
           <p style={{ color: '#9ca3af' }}>Speak after starting the call — your words appear here.</p>

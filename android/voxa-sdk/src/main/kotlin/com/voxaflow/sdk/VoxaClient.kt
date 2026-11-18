@@ -78,10 +78,10 @@ class VoxaClient(private val appContext: Context, config: VoxaConfig) {
     }
 
     /** Start (or join) a voice/video call. Omit [callId] for an ephemeral room. */
-    suspend fun startCall(callId: String? = null, video: Boolean = false, name: String? = null): CallSession {
+    suspend fun startCall(callId: String? = null, video: Boolean = false, name: String? = null, autoRejoin: Boolean = true): CallSession {
         profile.requireCapability(if (video) Capability.joinVideo else Capability.joinCall)
         ensureConnected()
-        return CallSession.start(appContext, rest, realtime, callId ?: ephemeralId("call"), video, name)
+        return CallSession.start(appContext, rest, realtime, callId ?: ephemeralId("call"), video, name, autoRejoin)
     }
 
     /** Create a multi-party meeting (AGENT+); returns its id + room name. */
@@ -101,10 +101,11 @@ class VoxaClient(private val appContext: Context, config: VoxaConfig) {
         displayName: String? = null,
         role: String? = null,
         language: String? = null,
+        autoRejoin: Boolean = true,
     ): MeetingSession {
         profile.requireCapability(if (video) Capability.joinVideo else Capability.joinCall)
         ensureConnected()
-        return MeetingSession.join(appContext, rest, realtime, meetingId, video, displayName, role, language)
+        return MeetingSession.join(appContext, rest, realtime, meetingId, video, displayName, role, language, autoRejoin)
     }
 
     /** Open a chat conversation (attach to [conversationId], or start one on a [channel] handle). */
@@ -159,10 +160,10 @@ class VoxaClient(private val appContext: Context, config: VoxaConfig) {
      * Accept an incoming ring, then join its room. Returns the live [CallSession].
      * Equivalent to [answerCall] + [startCall] for the ringing callId.
      */
-    suspend fun acceptCall(callId: String, video: Boolean = false, name: String? = null): CallSession {
+    suspend fun acceptCall(callId: String, video: Boolean = false, name: String? = null, autoRejoin: Boolean = true): CallSession {
         ensureConnected()
         rest.post("/calls/$callId/answer")
-        return CallSession.start(appContext, rest, realtime, callId, video, name)
+        return CallSession.start(appContext, rest, realtime, callId, video, name, autoRejoin)
     }
 
     /** Decline an incoming ring as the callee. */

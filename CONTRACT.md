@@ -44,8 +44,8 @@ Same surface on every platform (idioms differ):
 ```
 VoxaClient(config: { endpoint, token, onTokenRefresh? })
   connect() · disconnect() · can(capability) · profile{ role, capabilities, tenantId, userId }
-  startCall({ callId?, video?, name? }) -> CallSession        // requires joinCall/joinVideo
-  joinMeeting(meetingId, { video?, displayName?, role?, language? }) -> MeetingSession  // joinCall/joinVideo
+  startCall({ callId?, video?, name?, autoRejoin? = true }) -> CallSession        // requires joinCall/joinVideo
+  joinMeeting(meetingId, { video?, displayName?, role?, language?, autoRejoin? = true }) -> MeetingSession  // joinCall/joinVideo
   createMeeting({ type?, title? }) -> { meetingId, roomName }  // callControl (AGENT+)
   openChat({ conversationId? | channel?, contactIdentifier?, language? }) -> ChatSession  // requires chat
   setPresence(status)                                          // requires presence (AGENT+)
@@ -55,7 +55,7 @@ VoxaClient(config: { endpoint, token, onTokenRefresh? })
 
   // Directed ringing (SDK10) — "dial user X → ring → accept/reject/connect":
   inviteUser(toUserId, { video?, name? }) -> { callId, expiresAt }  // requires joinCall
-  acceptCall(callId, { video?, name? }) -> CallSession              // callee answers + joins
+  acceptCall(callId, { video?, name?, autoRejoin? = true }) -> CallSession  // callee answers + joins
   rejectCall(callId, { reason? })                                  // callee declines
   cancelCall(callId)                                               // caller cancels before answer
 
@@ -74,6 +74,10 @@ VoxaClient(config: { endpoint, token, onTokenRefresh? })
 CallSession   (wraps the platform LiveKit Room — `lkRoom`/`room` escape hatch)
   setMicEnabled(bool) · setMuted(bool) · setCameraEnabled(bool)
   startScreenShare() · stopScreenShare() · hold() · resume() · end()
+  // Auto-rejoin (see §3.1) — same on MeetingSession:
+  state · rejoinNow() · rejoinAttemptNumber
+  events: connectionState (connected|reconnecting|disconnected — THIS session's media link),
+          rejoinAttempt { attempt, nextDelayMs }
 
 ChatSession
   conversationId · sendMessage(text) -> id · setTyping(bool) · markRead() · leave()
@@ -84,6 +88,45 @@ ChatSession
 |---|---|---|---|---|---|
 | async | `Promise` | `Promise` | `Future` | `async/await` | `suspend` |
 | events | typed `EventEmitter` | (same) | `Stream` | Combine publishers | `Flow` |
+
+### 3.1 Auto-rejoin (Meet-style) — identical semantics on all 5 platforms
+
+When the LiveKit connection drops (phone locked / app backgrounded, network lost, media node
+restarted) the session re-joins **the same room** instead of ending the call:
+
+1. **Never rejoin** intentional ends: user left / `end()`, duplicate identity (joined elsewhere),
+   participant removed, room deleted/closed. (iOS: a clean disconnect — `error == nil` — or
+   `.cancelled` also count as "left".) Everything else → rejoin. `autoRejoin: false` → just `disconnected`.
+2. **Fresh join**: new token (`POST /rtc/token` or `/meetings/:id/token`, same id) → connect the
+   *same* Room object (app listeners/views survive) → restore the user's **current** mic/cam choice
+   → re-subscribe the realtime socket (`call:join` / meeting join).
+3. **Backoff** before each try: 500 ms, 2 s, 5 s, 10 s, 20 s, then **30 s repeating**.
+4. **Wait until ready** before each try: foreground/visible **and** online (web: `visibilityState`
+   + `navigator.onLine`; Android: activity lifecycle + `ConnectivityManager`; iOS: UIApplication
+   notifications + `NWPathMonitor`; Flutter: app lifecycle only — no connectivity plugin is forced,
+   offline tries fail fast; RN: `bindAppStateRejoin` wakes on foreground).
+5. **Wake early** (skip the rest of the wait) when the network comes back, the app returns to the
+   foreground, or the app calls `rejoinNow()`.
+6. **Give up** after **10 minutes** of continuous failure → `disconnected`. `rejoinNow()` then
+   starts a new loop. `rejoinNow()` is **ignored** while LiveKit's own short resume is running (room
+   not yet disconnected — avoids a double connect), while connected, and after `end()`.
+7. **Events**: session `connectionState`: `connected → reconnecting → connected` (or
+   `→ disconnected` on give-up / intentional end; LiveKit's own short resume also shows as
+   `reconnecting`). `rejoinAttempt { attempt, nextDelayMs }` fires **right before each try**
+   (`attempt` = tries made; `nextDelayMs` = wait before the next try if this one fails).
+
+Prebuilt UI copy (React `CallView`/`<ReconnectBanner>`, RN `CallView`, Flutter `VoxaCallScreen`/
+`VoxaReconnectBanner`): "Connection lost — reconnecting… (attempt n)" + **Rejoin now**; after
+give-up "Connection lost. Check your network, then rejoin." + **Rejoin**.
+
+| Platform | session state | attempts | pure logic + tests |
+|---|---|---|---|
+| Web / RN | `session.on('connectionState')`, `session.state` | `on('rejoinAttempt')` | `web-core/src/sessions/rejoin.ts` (vitest) |
+| Flutter | `session.connectionState` (Stream), `state` | `rejoinAttempts` | `lib/src/sessions/rejoin.dart` (flutter test) |
+| iOS | `connectionState` (Combine), `state` | `rejoinAttempts` | `Sources/VoxaRejoin` (XCTest, LiveKit-free target) |
+| Android | `connectionState` (StateFlow) | `rejoinAttempts` (SharedFlow) | `sessions/Rejoin.kt` (JUnit + coroutines-test) |
+
+Note: the **client** `connectionState` is still the realtime socket; the per-session one above is the media link.
 
 ---
 

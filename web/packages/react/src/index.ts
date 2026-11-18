@@ -18,6 +18,7 @@ export { CallView, type CallViewProps } from './components/CallView.js';
 export { ChatWidget, type ChatWidgetProps } from './components/ChatWidget.js';
 export { CopilotPanel, type CopilotPanelProps } from './components/CopilotPanel.js';
 export { IncomingCallModal, type IncomingCallModalProps } from './components/IncomingCallModal.js';
+export { ReconnectBanner, type ReconnectBannerProps } from './components/ReconnectBanner.js';
 
 // Re-export core types so consumers don't need a direct @voxaflow/web-core import.
 export type {

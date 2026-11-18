@@ -5,9 +5,11 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 
 import '../models/models.dart';
 import '../sessions/call_session.dart';
+import '../sessions/rejoin.dart' show VoxaRejoinAttempt;
 import '../voxa_client.dart';
 import 'voxa_call_controls.dart';
 import 'voxa_call_theme.dart';
+import 'voxa_reconnect_banner.dart';
 import 'voxa_video_view.dart';
 
 /// A full, drop-in in-call screen for a [CallSession] or [MeetingSession]
@@ -186,6 +188,19 @@ class _VoxaCallScreenState extends State<VoxaCallScreen> {
         child: Column(
           children: [
             _header(t),
+            StreamBuilder<VoxaConnectionState>(
+              stream: widget.session.connectionState,
+              initialData: widget.session.state,
+              builder: (_, snap) => StreamBuilder<VoxaRejoinAttempt>(
+                stream: widget.session.rejoinAttempts,
+                builder: (_, __) => VoxaReconnectBanner(
+                  state: snap.data ?? VoxaConnectionState.connected,
+                  attempt: widget.session.rejoinAttemptNumber,
+                  onRejoin: widget.session.rejoinNow,
+                  theme: t,
+                ),
+              ),
+            ),
             Expanded(child: _stage(t)),
             if (widget.showTranscript && widget.client != null) _transcriptPanel(t),
             VoxaCallControlBar(

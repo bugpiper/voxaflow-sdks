@@ -5,7 +5,8 @@
   "description": "Voxa Flow Web SDK — pnpm monorepo (web-core, react, widget).",
   "scripts": {
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
   },
   "devDependencies": {
     "typescript": "^5.6.0"

@@ -73,10 +73,10 @@ public final class VoxaClient {
     }
 
     /// Start (or join) a voice/video call. Omit `callId` for an ephemeral room.
-    public func startCall(callId: String? = nil, video: Bool = false, name: String? = nil) async throws -> CallSession {
+    public func startCall(callId: String? = nil, video: Bool = false, name: String? = nil, autoRejoin: Bool = true) async throws -> CallSession {
         try profile.requireCapability(video ? .joinVideo : .joinCall)
         try ensureConnected()
-        return try await CallSession.start(rest: rest, realtime: realtime, callId: callId ?? Self.ephemeralId("call"), video: video, name: name)
+        return try await CallSession.start(rest: rest, realtime: realtime, callId: callId ?? Self.ephemeralId("call"), video: video, name: name, autoRejoin: autoRejoin)
     }
 
     /// Create a multi-party meeting (AGENT+); returns its id + room name.
@@ -91,10 +91,10 @@ public final class VoxaClient {
     }
 
     /// Join a multi-party meeting by id.
-    public func joinMeeting(_ meetingId: String, video: Bool = false, displayName: String? = nil, role: String? = nil, language: String? = nil) async throws -> MeetingSession {
+    public func joinMeeting(_ meetingId: String, video: Bool = false, displayName: String? = nil, role: String? = nil, language: String? = nil, autoRejoin: Bool = true) async throws -> MeetingSession {
         try profile.requireCapability(video ? .joinVideo : .joinCall)
         try ensureConnected()
-        return try await MeetingSession.join(rest: rest, realtime: realtime, meetingId: meetingId, video: video, displayName: displayName, role: role, language: language)
+        return try await MeetingSession.join(rest: rest, realtime: realtime, meetingId: meetingId, video: video, displayName: displayName, role: role, language: language, autoRejoin: autoRejoin)
     }
 
     /// Open a chat conversation (attach to `conversationId`, or start one on a `channel` handle).
@@ -140,10 +140,10 @@ public final class VoxaClient {
     }
 
     /// Accept an incoming ring, then join its room. Returns the live `CallSession`.
-    public func acceptCall(_ callId: String, video: Bool = false, name: String? = nil) async throws -> CallSession {
+    public func acceptCall(_ callId: String, video: Bool = false, name: String? = nil, autoRejoin: Bool = true) async throws -> CallSession {
         try ensureConnected()
         _ = try await rest.post("/calls/\(callId)/answer")
-        return try await CallSession.start(rest: rest, realtime: realtime, callId: callId, video: video, name: name)
+        return try await CallSession.start(rest: rest, realtime: realtime, callId: callId, video: video, name: name, autoRejoin: autoRejoin)
     }
 
     /// Decline an incoming ring as the callee.
